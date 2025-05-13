@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Sistema de Categorização de Projetos{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilo para o fundo da página */
+    body {
+        background: linear-gradient(135deg, rgba(var(--primary-color-rgb), 0.03) 0%, rgba(var(--primary-dark-rgb), 0.05) 100%);
+        position: relative;
+        overflow-x: hidden;
+    }
+    
+    /* Padrão de fundo sutil */
+    body::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            radial-gradient(circle at 25% 25%, rgba(var(--primary-color-rgb), 0.03) 1%, transparent 6%),
+            radial-gradient(circle at 75% 75%, rgba(var(--primary-color-rgb), 0.03) 1%, transparent 6%);
+        background-size: 60px 60px;
+        z-index: -1;
+    }
+    
+    /* Container principal */
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 85vh;
+        padding: 1rem;
+    }
+    
+    /* Card de login */
+    .login-card {
+        max-width: 400px;
+        width: 100%;
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+        transform: translateY(0);
+        transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+        animation: fadeIn 0.8s ease-out;
+    }
+    
+    /* Animação de entrada */
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Efeito hover no card */
+    .login-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    }
+    
+    /* Cabeçalho do card */
+    .login-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Efeito de brilho no cabeçalho */
+    .login-header::after {
+        content: "";
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: linear-gradient(
+            to bottom right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            rgba(255, 255, 255, 0) 100%
+        );
+        transform: rotate(30deg);
+        animation: shimmer 8s infinite linear;
+        z-index: 1;
+    }
+    
+    @keyframes shimmer {
+        from { transform: translateX(-100%) rotate(30deg); }
+        to { transform: translateX(100%) rotate(30deg); }
+    }
+    
+    /* Ícone do cabeçalho */
+    .login-form-icon {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        display: block;
+        color: white;
+        position: relative;
+        z-index: 2;
+    }
+    
+    /* Título do cabeçalho */
+    .login-header h3 {
+        font-weight: 600;
+        font-size: 1.5rem;
+        position: relative;
+        z-index: 2;
+    }
+    
+    /* Corpo do card */
+    .card-body {
+        padding: 2rem;
+        background-color: white;
+    }
+    
+    /* Campos de formulário */
+    .form-floating .form-control {
+        background-color: white;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+        padding: 1.2rem 1rem 0.5rem;
+        height: calc(3.5rem + 2px);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-floating .form-control:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(var(--primary-color-rgb), 0.15);
+    }
+    
+    .form-floating label {
+        padding: 0.75rem 1rem;
+        color: #6c757d;
+        font-weight: 400;
+        transition: all 0.2s ease;
+    }
+    
+    .form-floating > .form-control:focus ~ label,
+    .form-floating > .form-control:not(:placeholder-shown) ~ label {
+        color: var(--primary-color);
+        transform: scale(0.85) translateY(-0.75rem) translateX(0.15rem);
+        opacity: 1;
+    }
+    
+    /* Botão de login */
+    .login-btn {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        border: none;
+        font-weight: 500;
+        padding: 0.8rem 0;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Efeito de ripple no botão */
+    .login-btn::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 5px;
+        height: 5px;
+        background: rgba(255, 255, 255, 0.5);
+        opacity: 0;
+        border-radius: 100%;
+        transform: scale(1, 1) translate(-50%, -50%);
+        transform-origin: 50% 50%;
+    }
+    
+    .login-btn:active::after {
+        animation: ripple 0.6s ease-out;
+    }
+    
+    @keyframes ripple {
+        0% {
+            transform: scale(0, 0);
+            opacity: 0.5;
+        }
+        100% {
+            transform: scale(20, 20);
+            opacity: 0;
+        }
+    }
+    
+    .login-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(var(--primary-color-rgb), 0.3);
+    }
+    
+    .login-btn:active {
+        transform: translateY(0);
+    }
+    
+    /* Rodapé do card */
+    .card-footer {
+        background-color: rgba(0, 0, 0, 0.02);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        padding: 1rem;
+    }
+    
+    .card-footer small {
+        color: #6c757d;
+        font-size: 0.85rem;
+    }
+    
+    /* Alerta de erro */
+    .alert-danger {
+        background-color: rgba(220, 53, 69, 0.1);
+        color: #dc3545;
+        border: none;
+        border-radius: 10px;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 576px) {
+        .login-card {
+            max-width: 100%;
+            margin: 0 1rem;
+        }
+        
+        .login-header {
+            padding: 1.5rem 1rem;
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+    }
+    
+    /* Variáveis CSS para cores */
+    :root {
+        --primary-color-rgb: 37, 143, 120;
+        --primary-dark-rgb: 26, 99, 84;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card card">
+        <div class="login-header">
+            <i class="fas fa-user-shield login-form-icon"></i>
+            <h3 class="mb-0">Login com SharePoint</h3>
+        </div>
+        <div class="card-body">
+            {% if error %}
+            <div class="alert alert-danger mb-4">
+                <i class="fas fa-exclamation-circle me-2"></i>{{ error }}
+            </div>
+            {% endif %}
+            
+            {% if is_system_session %}
+            <div class="alert alert-info mb-4">
+                <i class="fas fa-info-circle me-2"></i>Autenticação necessária para operação do sistema
+            </div>
+            {% endif %}
+            
+            <form method="POST" action="{{ url_for('main.login') }}">
+                {% if is_system_session %}
+                <input type="hidden" name="session_type" value="sistema">
+                {% endif %}
+                <div class="form-floating mb-4">
+                    <input type="email" class="form-control" id="username" name="username" required 
+                           placeholder="Usuário">
+                    <label for="username"><i class="fas fa-envelope me-2"></i>Usuário</label>
+                </div>
+                
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" name="password" required
+                           placeholder="Senha">
+                    <label for="password"><i class="fas fa-lock me-2"></i>Senha</label>
+                </div>
+                
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-primary login-btn">
+                        <i class="fas fa-sign-in-alt me-2"></i>Entrar no Sistema
+                    </button>
+                </div>
+            </form>
+        </div>
+        <div class="card-footer text-center py-3">
+            <small class="text-muted">Suas credenciais são usadas apenas para autenticação com o SharePoint</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

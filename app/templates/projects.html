@@ -1,0 +1,756 @@
+{% extends "base.html" %}
+
+{% block title %}gepesClassifier v1.0{% endblock %}
+
+{% block extra_css %}
+<style>
+    .projects-header {
+        padding-bottom: 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 0rem;
+    }
+    
+    .projects-info {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .project-icon-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .project-icon {
+        width: 52px;
+        height: 52px;
+        object-fit: contain;
+        margin-top: 5px;
+    }
+    
+    .titles-container {
+        display: flex;
+        flex-direction: column;
+        padding-top: 0.1rem;
+    }
+    
+    .projects-title {
+        color: var(--primary-dark);
+        font-weight: 700;
+        font-size: 1.5rem;
+        display: flex;
+        align-items: center;
+        letter-spacing: 0.5px;
+        margin-bottom: -0.1rem;
+    }
+    
+    .projects-title i {
+        color: var(--primary-color);
+    }
+    
+    .projects-subtitle {
+        color: var(--text-muted);
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-bottom: 0;
+    }
+    
+    .version-badge, .project-count-badge {
+        background-color: var(--primary-dark);
+        color: white;
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 0.15rem 0.5rem;
+        border-radius: 4px;
+        letter-spacing: 0.5px;
+        margin-left: 0.75rem;
+        vertical-align: top;
+        background: linear-gradient(135deg, #029260, #1A6354);
+        display: inline-flex;
+        align-items: center;
+    }
+    
+    .count-icon {
+        margin-right: 4px;
+        font-size: 0.7rem;
+        color: white !important;
+    }
+    
+    .search-container {
+        position: relative;
+        width: 300px;
+    }
+    
+    .search-container i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+    }
+    
+    .search-input {
+        border-radius: 10px;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid var(--input-border);
+        background-color: var(--input-bg);
+        transition: all 0.3s ease;
+    }
+    
+    .search-input:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(53, 187, 159, 0.25);
+    }
+    
+    .project-table-card {
+        border-radius: 12px;
+        overflow: hidden;
+        border: solid 1px #ccc;
+        transition: all 0.3s ease;
+    }
+    
+    .project-table-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    }
+    
+    #projectsTable {
+        margin-bottom: 0;
+    }
+    
+    #projectsTable thead th {
+        background-color: var(--primary-dark);
+        color: white;
+        font-weight: 600;
+        padding: 1rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    #projectsTable tbody td {
+        padding: 0.75rem 1rem;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--card-border);
+        white-space: nowrap;
+    }
+    
+    /* Permitir quebra de linha na coluna de Área de Aplicação */
+    #projectsTable tbody tr td:nth-child(6) {
+        white-space: normal;
+    }
+    
+    .project-title {
+        font-weight: 300;
+        color: var(--text-muted);
+        font-size: 0.8rem;
+        border-bottom: none;
+        white-space: nowrap;
+        max-width: 250px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        line-height: 1.2;
+        padding: 0;
+        position: relative;
+    }
+    
+    .project-code {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        white-space: nowrap;
+        max-width: 100px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+        line-height: 1.2;
+        padding: 0;
+        margin-top: 0.1rem;
+        position: relative;
+    }
+    
+    /* Aumentar o limite de caracteres para a coluna de Área de Aplicação */
+    #projectsTable tbody tr td:nth-child(6) .project-code {
+        max-width: 250px; /* Reduzido para evitar barra de rolagem horizontal */
+        white-space: normal; /* Permitir quebra de linha */
+        text-overflow: clip; /* Não mostrar reticências */
+    }
+    
+    /* Garantir que a coluna Tec Verde não tenha quebra de texto */
+    #projectsTable tbody tr td:nth-child(7) {
+        white-space: nowrap;
+    }
+    
+    /* Garantir que o conteúdo da coluna Tec Verde não quebre */
+    #projectsTable tbody tr td:nth-child(7) .project-code {
+        white-space: nowrap;
+    }
+    
+    .clickable-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .clickable-row:hover {
+        background-color: var(--primary-bg-light);
+    }
+    
+    .clickable-row:hover .project-title {
+        color: var(--primary-color);
+    }
+    
+    .empty-state {
+        padding: 3rem 1rem;
+        text-align: center;
+        color: var(--text-muted);
+    }
+    
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    /* Alternância de cores nas linhas */
+    #projectsTable tbody tr:nth-child(even) {
+        background-color: rgba(0, 0, 0, 0.02);
+    }
+    
+    /* Estilos para o filtro */
+    .filter-container {
+        position: relative;
+        width: 220px;
+        margin-right: 1rem;
+    }
+    
+    .filter-container i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+    }
+    
+    .filter-select {
+        border-radius: 10px;
+        padding: 0.75rem 1rem 0.75rem 2.5rem;
+        border: 1px solid var(--input-border);
+        background-color: var(--input-bg);
+        transition: all 0.3s ease;
+        width: 100%;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236c757d' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 1rem center;
+        background-size: 16px 12px;
+    }
+    
+    .filter-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(53, 187, 159, 0.25);
+    }
+    
+    /* Estilos para os tooltips */
+    .tooltip-inner {
+        max-width: 300px;
+        padding: 0.5rem 0.75rem;
+        text-align: left;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    
+    .tooltip.show {
+        opacity: 1;
+    }
+    
+    /* Estilo para a célula do código do projeto */
+    .copy-code-cell {
+        cursor: copy !important;
+        position: relative;
+    }
+    
+    /* Estilo para o tooltip de copiado */
+    .copy-tooltip {
+        position: absolute;
+        background-color: var(--primary-dark);
+        color: white;
+        font-size: 0.8rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        top: -25px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 100;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        animation: fadeIn 0.2s ease-in-out;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    /* Estilos dos badges de status */
+    .badge.rounded-pill {
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0.3rem 0.8rem;
+        letter-spacing: 0.5px;
+    }
+    
+    .badge.bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529;
+    }
+    
+    .badge.bg-info {
+        background-color: #0d6efd !important;
+        color: white;
+    }
+    
+    .badge.bg-success {
+        background-color: #198754 !important;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="projects-header">
+    <div class="projects-info">
+        <div class="project-icon-container">
+            <img src="{{ url_for('static', filename='img/ai.png') }}" alt="Ícone de Projetos" class="project-icon">
+        </div>
+        <div class="titles-container">
+            <h2 class="projects-title">
+                gepesClassifier
+                <span class="version-badge">v1.0</span>
+                <span class="project-count-badge">
+                    <i class="fas fa-folder count-icon"></i>
+                    {{ "{:,}".format(projects|length).replace(',', '.') }}
+                </span>
+            </h2>
+            <p class="projects-subtitle">
+                Classificador de projetos Embrapii
+            </p>
+        </div>
+    </div>
+    <div class="header-right">
+        <div class="filter-container">
+            <i class="fas fa-filter"></i>
+            <select id="categoryFilter" class="form-control filter-select">
+                <option value="all">Todos os projetos</option>
+                <option value="uncategorized">Não Classificado</option>
+                <option value="ai_classified">Classificado por IA</option>
+                <option value="human_validated">Validado por Humano</option>
+            </select>
+        </div>
+        <div class="search-container">
+            <i class="fas fa-search"></i>
+            <input type="text" id="searchInput" class="form-control search-input" placeholder="Buscar projeto...">
+        </div>
+    </div>
+</div>
+
+<div class="card project-table-card">
+    <div class="table-responsive" style="overflow-x: auto; width: 100%;">
+        <table class="table" id="projectsTable" style="width: auto; min-width: 100%;">
+            <thead>
+                <tr>
+                    <th style="min-width: 150px;">Código</th>
+                    <th style="min-width: 100px;">Status</th>
+                    <th style="min-width: 80px;">UE</th>
+                    <th style="min-width: 100px;">Data</th>
+                <th style="min-width: 250px;">Título do Projeto</th>
+                <th style="min-width: 250px;">Área de Aplicação</th>
+                <th style="min-width: 80px;">Tec Verde</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if projects %}
+                    {% for project in projects %}
+                    <tr class="clickable-row" data-href="/categorize/{{ project.codigo_projeto }}">
+                        <td class="copy-code-cell" data-code="{{ project.codigo_projeto }}">
+                            {% if project.codigo_projeto %}
+                            <span class="project-code">{{ project.codigo_projeto }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if project.human_validated %}
+                                <span class="badge bg-success rounded-pill">Validado por Humano</span>
+                            {% elif project.ai_classified %}
+                                <span class="badge bg-info rounded-pill">Classificado por IA</span>
+                            {% else %}
+                                <span class="badge bg-warning rounded-pill">Não Classificado</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if project.unidade_embrapii %}
+                            <span class="project-code" data-bs-toggle="tooltip" title="{{ project.unidade_embrapii }}">{{ project.unidade_embrapii }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if project.data_contrato %}
+                            <span class="project-code data-contrato" data-timestamp="{{ project.data_contrato }}">{{ project.data_contrato }}</span>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="project-title" data-bs-toggle="tooltip" title="{{ project.titulo }}">{{ project.titulo }}</span>
+                        </td>
+                        <td>
+                            {% if project._aia_n1_macroarea or project._aia_n2_segmento %}
+                                {% if project.additional_classifications is defined and project.additional_classifications %}
+                                <span class="project-code" data-bs-toggle="tooltip" data-bs-html="true" 
+                                      title="<div class='text-start'><strong>Classificações adicionais:</strong>
+                                             {% for cls in project.additional_classifications %}
+                                             <div class='mt-2 mb-1'><strong>{{ loop.index }}.</strong> {{ cls.microarea|default('') }} / {{ cls.segmento|default('') }}</div>
+                                             {% endfor %}</div>">
+                                    {% if project._aia_n1_macroarea and project._aia_n2_segmento %}
+                                        {{ project._aia_n1_macroarea }}, {{ project._aia_n2_segmento }}
+                                    {% elif project._aia_n1_macroarea %}
+                                        {{ project._aia_n1_macroarea }}
+                                    {% elif project._aia_n2_segmento %}
+                                        {{ project._aia_n2_segmento }}
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span class="project-code">
+                                    {% if project._aia_n1_macroarea and project._aia_n2_segmento %}
+                                        {{ project._aia_n1_macroarea }}, {{ project._aia_n2_segmento }}
+                                    {% elif project._aia_n1_macroarea %}
+                                        {{ project._aia_n1_macroarea }}
+                                    {% elif project._aia_n2_segmento %}
+                                        {{ project._aia_n2_segmento }}
+                                    {% endif %}
+                                </span>
+                                {% endif %}
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if project.tecverde_se_aplica is defined and project.tecverde_se_aplica == "1" %}
+                                {% if project.tecverde_classe and project.tecverde_subclasse %}
+                                <span class="project-code" data-bs-toggle="tooltip" data-bs-html="true" 
+                                      title="<div class='text-start'><strong>Classe:</strong> {{ project.tecverde_classe }}<br><strong>Subclasse:</strong> {{ project.tecverde_subclasse }}</div>">
+                                    Sim
+                                </span>
+                                {% else %}
+                                <span class="project-code">Sim</span>
+                                {% endif %}
+                            {% elif project.tecverde_se_aplica is defined and project.tecverde_se_aplica == "0" %}
+                                <span class="project-code">Não</span>
+                            {% elif project.tecverde_se_aplica is defined and project.tecverde_se_aplica == 1 %}
+                                {% if project.tecverde_classe and project.tecverde_subclasse %}
+                                <span class="project-code" data-bs-toggle="tooltip" data-bs-html="true" 
+                                      title="<div class='text-start'><strong>Classe:</strong> {{ project.tecverde_classe }}<br><strong>Subclasse:</strong> {{ project.tecverde_subclasse }}</div>">
+                                    Sim
+                                </span>
+                                {% else %}
+                                <span class="project-code">Sim</span>
+                                {% endif %}
+                            {% else %}
+                                {% set project_id = project.codigo_projeto %}
+                                {% set has_ai_suggestion = false %}
+                                {% set ai_suggestion_value = 0 %}
+                                {% set ai_suggestion_class = "" %}
+                                {% set ai_suggestion_subclass = "" %}
+                                
+                                {% for suggestion in ai_suggestions if suggestion.project_id == project_id %}
+                                    {% set has_ai_suggestion = true %}
+                                    {% set ai_suggestion_value = suggestion.tecverde_se_aplica %}
+                                    {% set ai_suggestion_class = suggestion.tecverde_classe %}
+                                    {% set ai_suggestion_subclass = suggestion.tecverde_subclasse %}
+                                {% endfor %}
+                                
+                                {% if has_ai_suggestion and ai_suggestion_value == 1 %}
+                                    {% if ai_suggestion_class and ai_suggestion_subclass %}
+                                    <span class="project-code" data-bs-toggle="tooltip" data-bs-html="true" 
+                                          title="<div class='text-start'><strong>Classe:</strong> {{ ai_suggestion_class }}<br><strong>Subclasse:</strong> {{ ai_suggestion_subclass }}<br><em>(Sugerido por IA)</em></div>">
+                                        Sim
+                                    </span>
+                                    {% else %}
+                                    <span class="project-code">Sim</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="project-code">Não</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state">
+                                <i class="fas fa-folder-open"></i>
+                                <p>Nenhum projeto encontrado</p>
+                                <button class="btn btn-gradient rounded-pill mt-2">
+                                    <i class="fas fa-plus me-1"></i> Novo Projeto
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Função para formatar timestamp para data no formato brasileiro (dd/mm/aaaa)
+    function formatarDataBrasileira(timestamp) {
+        // Verificar se o timestamp é válido
+        if (!timestamp || isNaN(timestamp)) {
+            return "-";
+        }
+        
+        // Converter para número se for string
+        if (typeof timestamp === 'string') {
+            timestamp = parseInt(timestamp);
+        }
+        
+        // Criar objeto de data
+        const data = new Date(timestamp);
+        
+        // Verificar se a data é válida
+        if (isNaN(data.getTime())) {
+            return "-";
+        }
+        
+        // Formatar para dd/mm/aaaa
+        const dia = String(data.getDate()).padStart(2, '0');
+        const mes = String(data.getMonth() + 1).padStart(2, '0'); // Mês começa em 0
+        const ano = data.getFullYear();
+        
+        return `${dia}/${mes}/${ano}`;
+    }
+
+    $(document).ready(function() {
+        // Inicializar tooltips do Bootstrap com opções personalizadas
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                placement: 'top',
+                trigger: 'hover',
+                html: true,
+                container: 'body',
+                boundary: 'window'
+            });
+        });
+        
+        // Formatar as datas de contrato
+        $('.data-contrato').each(function() {
+            const timestamp = $(this).data('timestamp');
+            $(this).text(formatarDataBrasileira(timestamp));
+        });
+        
+        // Limpar o localStorage relacionado ao overlay de carregamento ao carregar a página de projetos
+        localStorage.removeItem('aiLoadingActive');
+        localStorage.removeItem('aiLoadingMessage');
+        localStorage.removeItem('aiLoadingSubmessage');
+        
+        // Esconder o overlay de carregamento se estiver visível
+        if (typeof aiLoading !== 'undefined') {
+            aiLoading.hide();
+        }
+        
+        // Adicionar atributo data-categorizado às linhas
+        $(".clickable-row").each(function() {
+            // Verificar se o badge principal mostra algum status de classificação
+            var badgeText = $(this).find(".badge").first().text();
+            var isHumanValidated = badgeText === "Validado por Humano";
+            var isAIClassified = badgeText === "Classificado por IA";
+            var isClassified = isHumanValidated || isAIClassified;
+            
+            // Verificar se há classificações adicionais (verificando o tooltip na coluna de Área de Aplicação)
+            var hasAdditionalClassifications = false;
+            
+            // Verificar se o span de Área de Aplicação tem tooltip com classificações adicionais
+            var areaAplicacaoSpan = $(this).find("td:nth-child(6) .project-code[data-bs-toggle='tooltip']");
+            
+            if (areaAplicacaoSpan.length > 0) {
+                // Se o span tiver um tooltip, consideramos que tem classificações adicionais
+                hasAdditionalClassifications = true;
+            }
+            
+            // Definir atributos para os diferentes tipos de classificação
+            $(this).attr("data-human-validated", isHumanValidated);
+            $(this).attr("data-ai-classified", isAIClassified);
+            $(this).attr("data-not-classified", !isHumanValidated && !isAIClassified);
+            
+            // Log para depuração
+            if (hasAdditionalClassifications && !isClassified) {
+                console.log("Projeto com apenas classificações adicionais:", $(this).data("href"));
+            }
+        });
+        
+        // Função para filtrar projetos por texto
+        $("#searchInput").on("keyup", function() {
+            applyFilters();
+        });
+        
+        // Função para filtrar por categorização
+        $("#categoryFilter").on("change", function() {
+            // Aplicar filtros
+            applyFilters();
+        });
+        
+        // Função para aplicar todos os filtros ativos
+        function applyFilters() {
+            // Obter valor do filtro de texto
+            var textValue = $("#searchInput").val().toLowerCase();
+            
+            // Obter filtro de categorização selecionado
+            var categorizationFilter = $("#categoryFilter").val();
+            
+            // Aplicar filtros combinados
+            $("#projectsTable tbody tr").not("#noResults").each(function() {
+                var row = $(this);
+                var textMatch = row.text().toLowerCase().indexOf(textValue) > -1;
+                var categorizationMatch = true;
+                
+                // Verificar filtro de categorização
+                if (categorizationFilter === "uncategorized") {
+                    categorizationMatch = row.attr("data-not-classified") === "true";
+                } else if (categorizationFilter === "ai_classified") {
+                    categorizationMatch = row.attr("data-ai-classified") === "true";
+                } else if (categorizationFilter === "human_validated") {
+                    categorizationMatch = row.attr("data-human-validated") === "true";
+                }
+                
+                // Mostrar ou esconder linha com base nos filtros combinados
+                row.toggle(textMatch && categorizationMatch);
+            });
+            
+            // Atualizar contador de projetos visíveis
+            updateProjectCount();
+            
+            // Verificar se há resultados
+            checkNoResults(textValue);
+        }
+        
+        // Função para atualizar o contador de projetos
+        function updateProjectCount() {
+            var visibleRows = $("#projectsTable tbody tr:visible").not("#noResults").length;
+            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + visibleRows.toLocaleString('pt-BR').replace(',', '.'));
+        }
+        
+        // Função para verificar se não há resultados e mostrar mensagem
+        function checkNoResults(searchValue) {
+            var visibleRows = $("#projectsTable tbody tr:visible").not("#noResults").length;
+            if (visibleRows === 0) {
+                // Adicionar mensagem de nenhum resultado
+                if ($("#noResults").length === 0) {
+                    var message = searchValue ? 
+                        'Nenhum resultado encontrado para "' + searchValue + '"' : 
+                        'Nenhum projeto encontrado com os filtros selecionados';
+                    
+                    $("#projectsTable tbody").append(
+                        '<tr id="noResults"><td colspan="7">' +
+                        '<div class="empty-state">' +
+                        '<i class="fas fa-search"></i>' +
+                        '<p>' + message + '</p>' +
+                        '</div></td></tr>'
+                    );
+                } else {
+                    // Atualizar mensagem existente
+                    var message = searchValue ? 
+                        'Nenhum resultado encontrado para "' + searchValue + '"' : 
+                        'Nenhum projeto encontrado com os filtros selecionados';
+                    
+                    $("#noResults td div p").text(message);
+                }
+            } else {
+                // Remover mensagem se houver resultados
+                $("#noResults").remove();
+            }
+        }
+        
+        // Função para copiar o código do projeto ao clicar na primeira coluna
+        $(".copy-code-cell").click(function(e) {
+            e.stopPropagation(); // Impedir que o evento seja propagado para a linha
+            
+            const code = $(this).data("code");
+            if (code) {
+                // Copiar o código para a área de transferência
+                navigator.clipboard.writeText(code).then(function() {
+                    // Criar e mostrar o tooltip de confirmação
+                    const cell = $(e.currentTarget);
+                    
+                    // Verificar se o tooltip já existe
+                    if (cell.find(".copy-tooltip").length === 0) {
+                        cell.append('<div class="copy-tooltip"><i class="fas fa-check"></i> Copiado!</div>');
+                        
+                        // Remover o tooltip após 2 segundos
+                        setTimeout(function() {
+                            cell.find(".copy-tooltip").fadeOut(200, function() {
+                                $(this).remove();
+                            });
+                        }, 2000);
+                    }
+                }).catch(function(err) {
+                    console.error('Erro ao copiar texto: ', err);
+                });
+            }
+        });
+        
+        // Função para tornar as linhas clicáveis (modificado para ignorar a primeira coluna)
+        $(".clickable-row").click(function(e) {
+            // Se o clique foi na primeira coluna, não redirecionar
+            if ($(e.target).closest(".copy-code-cell").length > 0) {
+                return;
+            }
+            
+            // Verificar o status do projeto
+            const isHumanValidated = $(this).attr("data-human-validated") === "true";
+            const isAIClassified = $(this).attr("data-ai-classified") === "true";
+            
+            // Mostrar o overlay de carregamento antes de redirecionar
+            if (typeof aiLoading !== 'undefined') {
+                if (isHumanValidated) {
+                    // Mensagem para projetos validados por humano
+                    aiLoading.show(
+                        "Carregando projeto...", 
+                        "Abrindo projeto com classificação validada por humano"
+                    );
+                } else if (isAIClassified) {
+                    // Mensagem para projetos classificados por IA
+                    aiLoading.show(
+                        "Carregando projeto...", 
+                        "Abrindo projeto com classificação gerada pela IA"
+                    );
+                } else {
+                    // Mensagem para projetos não classificados
+                    aiLoading.show(
+                        "Carregando projeto...", 
+                        "Aguarde enquanto a IA analisa e prepara as sugestões de classificação"
+                    );
+                }
+            }
+            
+            // Redirecionar após um pequeno delay para garantir que o overlay seja exibido
+            setTimeout(() => {
+                window.location = $(this).data("href");
+            }, 100);
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,2898 @@
+{% extends "base.html" %}
+
+{% block title %}gepesClassifier v1.0{% endblock %}
+
+{# Adiciona a classe categorize-page ao body para estilização específica do overlay #}
+{% set body_class = "categorize-page" %}
+
+{% block extra_css %}
+<!-- Choices.js CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
+<!-- Custom styles for Choices.js and expandable sections -->
+<style>
+    /* Cursor pointer for expandable sections */
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    /* Highlight effect for expandable headers on hover */
+    #projectDetailsHeader:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+        border-radius: 6px;
+        transition: background-color 0.2s ease;
+    }
+    
+    /* Animate the chevron icon */
+    .project-collapse-icon i {
+        transition: transform 0.3s ease;
+    }
+    
+    /* Estilos para campos desabilitados de tecnologias verdes */
+    #tecverde_classe:disabled,
+    #tecverde_subclasse:disabled,
+    #tecverde_observacoes:disabled {
+        background-color: #f8f9fa;
+        cursor: not-allowed;
+        opacity: 0.7;
+        color: #6c757d;
+        border-color: #dee2e6;
+    }
+    
+    /* Destacar visualmente o campo "Se aplica" */
+    #tecverde_se_aplica {
+        border-left: 4px solid #20c997;
+    }
+    
+    /* Animação para os campos quando são habilitados/desabilitados */
+    #tecverde_classe,
+    #tecverde_subclasse,
+    #tecverde_observacoes {
+        transition: all 0.3s ease;
+    }
+    
+    /* Customizing Choices.js to match application style */
+    .choices {
+        margin-bottom: 0;
+    }
+    .choices__inner {
+        background-color: var(--input-bg);
+        border: 1px solid var(--input-border);
+        border-radius: 8px;
+        min-height: 44px;
+        padding: 0.5rem;
+    }
+    .choices__input {
+        background-color: transparent;
+    }
+    .choices__list--multiple .choices__item {
+        background-color: var(--primary-bg-light);
+        border: 1px solid var(--primary-color);
+        color: var(--primary-color);
+        border-radius: 50rem;
+        margin-bottom: 0.25rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    .choices__list--multiple .choices__item.is-highlighted {
+        background-color: var(--primary-color);
+        border: 1px solid var(--primary-color);
+        color: white;
+    }
+    .choices__list--dropdown {
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .choices__list--dropdown .choices__item--selectable.is-highlighted {
+        background-color: var(--primary-bg-light);
+        color: var(--primary-color);
+    }
+    .choices[data-type*="select-multiple"] .choices__button {
+        border-left: 1px solid rgba(53, 187, 159, 0.5);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21'%3E%3Cg fill='%23258F78' fill-rule='evenodd'%3E%3Cpath d='M2.592.044l18.364 18.364-2.548 2.548L.044 2.592z'/%3E%3Cpath d='M0 18.364L18.364 0l2.548 2.548L2.548 20.912z'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    .choices__list--multiple .choices__item.is-highlighted .choices__button {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='21' height='21' viewBox='0 0 21 21'%3E%3Cg fill='%23FFFFFF' fill-rule='evenodd'%3E%3Cpath d='M2.592.044l18.364 18.364-2.548 2.548L.044 2.592z'/%3E%3Cpath d='M0 18.364L18.364 0l2.548 2.548L2.548 20.912z'/%3E%3C/g%3E%3C/svg%3E");
+    }
+    /* Custom height for multiselect */
+    .multiselect-container .choices__inner {
+        min-height: 150px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    /* Ensure the choices container is visible */
+    .choices {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    /* Fix for choices dropdown positioning */
+    .choices__list--dropdown {
+        z-index: 10;
+    }
+    
+    /* Make sure the select is visible before Choices.js initializes */
+    select.choices-select {
+        display: block !important;
+        min-height: 150px;
+    }
+    /* Placeholder styling */
+    .choices__placeholder {
+        opacity: 0.7;
+    }
+    
+    /* Estilos para a exibição de classificações adicionais */
+    .additional-classifications-display .card {
+        transition: all 0.2s ease;
+        border-radius: 8px;
+    }
+    
+    .additional-classifications-display .card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .additional-classifications-display .badge {
+        font-size: 0.7rem;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+    }
+    
+    /* Estilos para o sistema de avaliação com estrelas */
+    .ai-rating {
+        display: inline-flex;
+    }
+    
+    .rating-star {
+        cursor: pointer;
+        font-size: 1.2rem;
+        color: #ccc;
+        margin-right: 0.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .rating-star:hover,
+    .rating-star.active {
+        color: #FFD700; /* Dourado para estrelas ativas/hover */
+    }
+    
+    .rating-star:hover ~ .rating-star {
+        color: #ccc;
+    }
+    
+    .ai-rating:hover .rating-star {
+        color: #FFD700;
+    }
+    
+    .ai-rating .rating-star:hover ~ .rating-star {
+        color: #ccc;
+    }
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Header com breadcrumb e botão de voltar -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <h2 class="page-title">
+                <img src="{{ url_for('static', filename='img/dashboard.png') }}" alt="Ícone de Projetos" class="project-icon">Painel de Classificação
+            </h2>
+        </div>
+        <div>
+            <a href="{{ url_for('main.view_categories') }}" class="btn btn-outline-success btn-sm rounded-pill me-2" title="Ver todas as categorias" target="_blank">
+                <i class="fas fa-list-ul"></i>
+            </a>
+            <a href="{{ url_for('main.projects') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                <i class="fas fa-arrow-left me-1"></i>Voltar
+            </a>
+            <button type="button" id="saveAllFormsBtn" class="btn btn-success btn-sm rounded-pill me-2" title="Salvar todos os formulários">
+                <i class="fas fa-save me-1"></i>Salvar Tudo
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Card de informações do projeto -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm project-info-card h-100 border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Informações do Projeto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- ID do projeto acima do título -->
+                    {% if project.codigo_projeto %}
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-success text-white me-2">ID</span>
+                        <span class="fw-bold">{{ project.codigo_projeto }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <h4 class="project-title mb-3">{{ project.titulo }}</h4>
+                    
+                    <!-- Seção colapsável para informações específicas do projeto -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center cursor-pointer" 
+                             id="projectDetailsHeader" data-bs-toggle="collapse" data-bs-target="#projectDetailsContent" 
+                             aria-expanded="false" aria-controls="projectDetailsContent" role="button">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-list-alt me-2 text-primary"></i>Dados do Projeto
+                            </h6>
+                            <button class="btn btn-link p-0 border-0 project-collapse-icon">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="projectDetailsContent" class="collapse">
+                            <div class="py-2">
+                                {% if project.unidade_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Unidade EMBRAPII</span>
+                                    <span>{{ project.unidade_embrapii }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.data_contrato %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Data do Contrato</span>
+                                    <span>{{ project.data_contrato }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.tipo_projeto %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Tipo de Projeto</span>
+                                    <span>{{ project.tipo_projeto }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._valor_total %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Valor Total</span>
+                                    <span id="valor_total_formatado">R$ {{ project._valor_total }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">EMBRAPII</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_embrapii }}">{{ project._perc_valor_embrapii }}%</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_empresa_sebrae %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Empresa/SEBRAE</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_empresa_sebrae }}">{{ project._perc_valor_empresa_sebrae }}%</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_unidade_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Unidade EMBRAPII</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_unidade_embrapii }}">{{ project._perc_valor_unidade_embrapii }}%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if project.objetivo %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Objetivo</h6>
+                        <p class="text-muted small">{{ project.objetivo }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.descricao_publica %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Descrição</h6>
+                        <p class="text-muted small">{{ project.descricao_publica }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.tecnologia_habilitadora %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Tecnologia Habilitadora <span class="text-muted">(Versão antiga)</span></h6>
+                        <p class="text-muted small">{{ project.tecnologia_habilitadora }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.area_aplicacao %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Área de Aplicação <span class="text-muted">(Versão antiga)</span></h6>
+                        <p class="text-muted small">{{ project.area_aplicacao }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Removido a seção de classificações adicionais daqui, movida para o card da direita -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Coluna de categorização - Card colapsável -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm categorization-card border-0" id="categoryForm">
+                <!-- Header colapsável -->
+                <div class="card-header bg-white d-flex justify-content-between align-items-center" 
+                     id="categorizationHeader" data-bs-toggle="collapse" data-bs-target="#categorizationContent" 
+                     aria-expanded="true" aria-controls="categorizationContent" role="button">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-layer-group me-2 text-primary"></i>Área de Interesse de Aplicação
+                    </h5>
+                    <button class="btn btn-link p-0 border-0 collapse-icon">
+                        <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+                
+                <!-- Conteúdo colapsável -->
+                <div id="categorizationContent" class="collapse show">
+                    
+                    <!-- Seção de sugestões da IA -->
+                    {% if ai_suggestion %}
+                    <div id="aiSuggestionSection" class="card-body border-bottom" style="background-color: #fff !important;">
+                        <div class="d-flex justify-content-start align-items-center w-100">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-robot me-2 tech-red-gradient"></i>
+                                <h5 class="mb-0 fw-bold tech-red-gradient">Classificação IA</h5>
+                                {% if ai_suggestion.is_reused_suggestion and ai_suggestion.timestamp %}
+                                <span class="badge bg-light text-secondary ms-2" title="Classificação gerada em {{ ai_suggestion.timestamp|replace('T', ' ')|truncate(16, True, '') }}">
+                                    <i class="fas fa-history me-1"></i>Existente
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center ms-auto">
+                                <span class="badge rounded-pill me-2 fs-6" id="aiConfidenceBadge" style="font-weight: 500; border: 2px solid #17a2b8;">
+                                    <img src="{{ url_for('static', filename='img/confianca.png') }}" alt="Confiança" height="20" class="me-1">
+                                    <span>-</span>
+                                </span>
+                                <button type="button" class="btn btn-sm btn-gradient rounded-pill" id="showJustificationBtn">
+                                    <i class="fas fa-info-circle me-1"></i><span>Ver Classificação</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 p-3 border rounded" id="justificationBox" style="display: none; background-color: #e6ffe62f !important;">
+
+                            
+                            <!-- Seção de categorias sugeridas pela IA -->
+                            <div class="mb-3">
+                                <h6 class="mb-2 tech-red-gradient fw-bold">Classificação sugerida</h6>
+                                
+                                <!-- Macroarea e Segmento -->
+                                <div class="mb-2">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-light text-dark border me-2">Macroarea</span>
+                                        <span id="aiMacroarea" class="text-muted">-</span>
+                                    </div>
+                                    <div class="d-flex align-items-center">
+                                        <span class="badge bg-light text-dark border me-2">Segmento</span>
+                                        <span id="aiSegmento" class="text-muted">-</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Domínios Afeitos (como balões) -->
+                                <div class="mb-2 mt-4">
+                                    <label class="form-label mb-0">
+                                        <h6 class="mb-1 tech-red-gradient fw-bold">Domínios Afeitos</h6>
+                                    </label>
+                                    <div id="aiDominioAfeito" class="category-bubbles-container">
+                                        <!-- Preenchido via JavaScript -->
+                                    </div>
+                                </div>
+                                
+                                <!-- Domínios Afeitos Outros (como balões) -->
+                                <div id="aiDominioOutroContainer" class="mb-2 mt-4">
+                                    <label class="form-label mb-0">
+                                        <h6 class="mb-1 tech-red-gradient fw-bold">Domínios Afeitos Outros</h6>                                    </label>
+                                    <div id="aiDominioOutro" class="category-bubbles-container">
+                                        <!-- Preenchido via JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Texto da justificativa -->
+                            <div>
+                                <h6 class="mb-2 tech-red-gradient"><i class="fas fa-lightbulb me-2"></i>Justificativa da IA</h6>
+                                <p id="aiJustificationText" class="mb-0 text-muted fst-italic">-</p>
+                            </div>
+                            
+                            <!-- Sistema de avaliação da resposta da IA -->
+                            <div class="mt-4 pt-3 border-top">
+                                <h6 class="mb-2 tech-red-gradient d-flex align-items-center justify-content-between">
+                                    <span><i class="fas fa-star me-2"></i>Avaliação da Resposta</span>
+                                    <span>
+                                        {% if ai_ratings and ai_ratings.aia and ai_ratings.aia.rating > 0 and ai_ratings.aia.nome_usuario and ai_ratings.aia.timestamp %}
+                                        <span class="badge bg-light text-secondary" title="Última avaliação">
+                                            <i class="fas fa-user-edit me-1"></i>{{ ai_ratings.aia.nome_usuario }} - {{ ai_ratings.aia.timestamp.split(' ')[0].split('-')|reverse|join('/') }} {{ ai_ratings.aia.timestamp.split(' ')[1] }}
+                                            {% if ai_ratings and ai_ratings.aia and ai_ratings.aia.rating > 0 %}
+                                            <span class="ms-1 badge bg-warning text-dark" title="Nota: {{ ai_ratings.aia.rating }}/5">
+                                                <i class="fas fa-star me-1"></i>{{ ai_ratings.aia.rating }}
+                                            </span>
+                                            {% endif %}
+                                        </span>
+                                        {% endif %}
+                                    </span>
+                                </h6>
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="ai-rating me-2">
+                                        <i class="far fa-star rating-star" data-value="1"></i>
+                                        <i class="far fa-star rating-star" data-value="2"></i>
+                                        <i class="far fa-star rating-star" data-value="3"></i>
+                                        <i class="far fa-star rating-star" data-value="4"></i>
+                                        <i class="far fa-star rating-star" data-value="5"></i>
+                                    </div>
+                                    <span id="aia-rating-text" class="small text-muted ms-2">Selecione uma avaliação</span>
+                                    <input type="hidden" id="aia-rating-value" name="aia_rating_value" value="{{ ai_ratings.aia.rating if ai_ratings and ai_ratings.aia }}">
+                                </div>
+                                <div class="form-group">
+                                    <textarea class="form-control form-control-sm" id="aia-rating-observacoes" 
+                                        name="aia_rating_observacoes" rows="2" 
+                                        placeholder="Observações sobre a classificação da IA...">{{ ai_ratings.aia.observacoes if ai_ratings and ai_ratings.aia }}</textarea>
+                                </div>
+                                <div class="text-end mt-2">
+                                    <button type="button" id="saveAiaRatingBtn" class="btn btn-sm btn-outline-primary rounded-pill">
+                                        <i class="fas fa-save me-1"></i>Salvar Avaliação
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Formulário de categorização -->
+                    <div class="card-body border-bottom" style="margin-left: 0.37rem !important; margin-right: 0.30rem !important;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 w-100">
+                            <div class="d-flex align-items-center">
+                                <h5 class="mb-0 fw-bold tech-red-gradient">Classificação</h5>
+                                {% if project_logs and project_logs|length > 0 %}
+                                <span class="badge bg-light text-secondary ms-2" title="Última atualização">
+                                    <i class="fas fa-user-edit me-1"></i>{{ project_logs[0].nome_usuario }} - {{ project_logs[0].data.split(' ')[0].split('-')|reverse|join('/') }} {{ project_logs[0].data.split(' ')[1] }}
+                                    {% if ai_ratings and ai_ratings.aia and ai_ratings.aia.rating %}
+                                    <span class="ms-1 badge bg-warning text-dark" title="Avaliação da IA: {{ ai_ratings.aia.rating }} estrelas">
+                                        <i class="fas fa-star me-1"></i>{{ ai_ratings.aia.rating }}
+                                    </span>
+                                    {% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <button type="button" class="btn btn-sm p-0 border-0 bg-transparent" id="toggleFormBtn">
+                                    <i class="fas fa-chevron-up text-primary"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div id="categorizationFormContent">
+                        <form method="POST">
+                            <input type="hidden" name="used_ai" id="used_ai" value="{% if ai_suggestion %}true{% else %}false{% endif %}">
+                            <input type="hidden" name="user_modified" id="user_modified" value="false">
+                            {% if existing and existing.additional_classifications %}
+                            <input type="hidden" id="existing_additional_classifications" value="{{ existing.additional_classifications|tojson|safe }}">
+                            {% endif %}
+                            {% if ai_suggestion %}
+                            <script>
+                                // Inicializar diretamente o objeto de sugestões da IA
+                                var aiSuggestionData = {
+                                    _aia_n1_macroarea: "{{ ai_suggestion._aia_n1_macroarea|e }}",
+                                    _aia_n2_segmento: "{{ ai_suggestion._aia_n2_segmento|e }}",
+                                    _aia_n3_dominio_afeito: "{{ ai_suggestion._aia_n3_dominio_afeito|e }}",
+                                    _aia_n3_dominio_outro: "{{ ai_suggestion._aia_n3_dominio_outro|e }}",
+                                    confianca: "{{ ai_suggestion.confianca|e }}",
+                                    justificativa: "{{ ai_suggestion.justificativa|e }}",
+                                    project_id: "{{ ai_suggestion.project_id|e }}",
+                                    is_ai_suggestion: true,
+                                    // Adicionar campos de tecnologias verdes
+                                    tecverde_se_aplica: "{{ ai_suggestion.tecverde_se_aplica|e }}",
+                                    tecverde_classe: "{{ ai_suggestion.tecverde_classe|e }}",
+                                    tecverde_subclasse: "{{ ai_suggestion.tecverde_subclasse|e }}",
+                                    tecverde_confianca: "{{ ai_suggestion.tecverde_confianca|e }}",
+                                    tecverde_justificativa: "{{ ai_suggestion.tecverde_justificativa|e }}"
+                                };
+                                
+                                // Log para depuração
+                                console.log("Dados de sugestão da IA carregados do template:", {
+                                    _aia_n1_macroarea: "{{ ai_suggestion._aia_n1_macroarea|e }}",
+                                    _aia_n2_segmento: "{{ ai_suggestion._aia_n2_segmento|e }}",
+                                    _aia_n3_dominio_afeito: "{{ ai_suggestion._aia_n3_dominio_afeito|e }}",
+                                    _aia_n3_dominio_outro: "{{ ai_suggestion._aia_n3_dominio_outro|e }}",
+                                    tecverde_se_aplica: "{{ ai_suggestion.tecverde_se_aplica|e }}",
+                                    tecverde_classe: "{{ ai_suggestion.tecverde_classe|e }}",
+                                    tecverde_subclasse: "{{ ai_suggestion.tecverde_subclasse|e }}",
+                                    tecverde_confianca: "{{ ai_suggestion.tecverde_confianca|e }}"
+                                });
+                            </script>
+                            {% endif %}
+                            
+                            <div class="row g-4">
+                                <!-- Primeira linha: Microárea e Segmento -->
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <select class="form-select shadow-sm" id="microarea" name="microarea">
+                                            <option value="">Selecione...</option>
+                                            {% for option in categories_lists.microarea %}
+                                                {% if option %}
+                                                <option value="{{ option }}" {% if existing and existing.microarea == option %}selected{% endif %}>
+                                                    {{ option }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <label for="microarea">Macroárea</label>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="form-floating">
+                                        <select class="form-select shadow-sm" id="segmento" name="segmento">
+                                            <option value="">Selecione...</option>
+                                            {% for option in categories_lists.segmento %}
+                                                {% if option %}
+                                                <option value="{{ option }}" {% if existing and existing.segmento == option %}selected{% endif %}>
+                                                    {{ option }}
+                                                </option>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </select>
+                                        <label for="segmento">Segmento</label>
+                                    </div>
+                                </div>
+                                
+                                <!-- Segunda linha: Domínios -->
+                                <div class="col-md-12">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label for="dominio" class="form-label">
+                                            Domínio
+                                        </label>
+                                        <button type="button" id="addDominioBtn" class="btn btn-sm btn-outline-primary rounded-pill disabled" title="Adicionar novo domínio">
+                                            <i class="fas fa-plus me-1"></i>Adicionar Domínio
+                                        </button>
+                                    </div>
+                                    <div class="multiselect-container">
+                                        <select class="form-select custom-select shadow-sm choices-select" id="dominio" name="dominio" multiple>
+                                            <!-- Preenchido via JavaScript -->
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-12">
+                                    <label for="dominio_outros" class="form-label">
+                                        Domínios Afeitos Outros
+                                    </label>
+                                    <div class="multiselect-container">
+                                        <select class="form-select custom-select shadow-sm choices-select" id="dominio_outros" name="dominio_outros" multiple>
+                                            <!-- Preenchido via JavaScript -->
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Campo de Observações -->
+                                <div class="col-md-12 mt-4">
+                                    <label for="observacoes" class="form-label">
+                                        Observações
+                                    </label>
+                                    <textarea class="form-control shadow-sm" id="observacoes" name="observacoes" rows="4" placeholder="Adicione observações relevantes sobre a classificação deste projeto...">{{ existing.observacoes if existing and existing.observacoes else '' }}</textarea>
+                                </div>
+                                
+                                <!-- Seção de classificações adicionais -->
+                                <div class="col-md-12 mt-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="mb-0 fw-bold tech-red-gradient">
+                                            <i class="fas fa-plus-circle me-2"></i>Classificações Adicionais
+                                        </h5>
+                                        <div>
+                                            <button type="button" id="addClassificationBtn" class="btn btn-sm btn-outline-primary rounded-pill">
+                                                <i class="fas fa-plus me-1"></i>Adicionar Classificação
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Exibição das classificações adicionais existentes -->
+                                    {% if existing and existing.additional_classifications %}
+                                    <div class="additional-classifications-display mb-4">
+                                        {% for classification in existing.additional_classifications %}
+                                        <div class="card mb-2 border-0 bg-light" id="existing-classification-{{ loop.index }}">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="d-flex align-items-center">
+                                                        <span class="badge bg-info text-white me-2">{{ loop.index }}</span>
+                                                        <div>
+                                                            <span class="fw-bold">{{ classification.microarea }}</span>
+                                                            <span class="text-muted ms-2">/ {{ classification.segmento }}</span>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger rounded-pill remove-existing-classification-btn" data-index="{{ loop.index }}">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    
+                                    <div id="additionalClassifications">
+                                        <!-- Aqui serão inseridos os conjuntos adicionais via JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 d-flex justify-content-end">
+                                <button type="submit" id="saveCategorizationBtn" class="btn btn-success rounded-pill" style="width: 100%;">
+                                    <i class="fas fa-save me-1"></i> SALVAR
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Novo card para Tecnologias Verdes -->
+        <div class="card shadow-sm categorization-card border-0 mt-4" id="tecverdeForm">
+            <!-- Header colapsável -->
+            <div class="card-header bg-white d-flex justify-content-between align-items-center" 
+                 id="tecverdeHeader" data-bs-toggle="collapse" data-bs-target="#tecverdeContent" 
+                 aria-expanded="true" aria-controls="tecverdeContent" role="button">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-leaf me-2 text-success"></i>Tecnologias Verdes
+                </h5>
+                <button class="btn btn-link p-0 border-0 tecverde-collapse-icon">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            
+            <!-- Conteúdo colapsável -->
+            <div id="tecverdeContent" class="collapse show">
+                
+                <!-- Seção de sugestões da IA -->
+                {% if ai_suggestion %}
+                <div id="aiTecverdeSuggestionSection" class="card-body border-bottom" style="background-color: #fff !important; margin-left: 0.37rem !important; margin-right: 0.30rem !important;">
+                    <div class="d-flex justify-content-start align-items-center w-100">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-robot me-2 tech-red-gradient"></i>
+                            <h5 class="mb-0 fw-bold tech-red-gradient">Classificação IA</h5>
+                            {% if ai_suggestion.is_reused_suggestion and ai_suggestion.timestamp %}
+                            <span class="badge bg-light text-secondary ms-2" title="Classificação gerada em {{ ai_suggestion.timestamp|replace('T', ' ')|truncate(16, True, '') }}">
+                                <i class="fas fa-history me-1"></i>Existente
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center ms-auto">
+                            <span class="badge rounded-pill me-2 fs-6 d-flex align-items-center" id="aiTecverdeConfidenceBadge" style="font-weight: 500; border: 2px solid #17a2b8;">
+                                <img src="{{ url_for('static', filename='img/confianca.png') }}" alt="Confiança" height="20" class="me-1">
+                                <span>-</span>
+                            </span>
+                            <button type="button" class="btn btn-sm btn-gradient rounded-pill" id="showTecverdeJustificationBtn">
+                                <i class="fas fa-info-circle me-1"></i><span>Ver Classificação</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 p-3 border rounded" id="tecverdeJustificationBox" style="display: none; background-color: #e6ffe62f !important;">
+                        
+                        <!-- Seção de categorias sugeridas pela IA -->
+                        <div class="mb-3">
+                            <h6 class="mb-2 tech-red-gradient fw-bold">Classificação sugerida</h6>
+                            
+                            <!-- Classe e Subclasse -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-light text-dark border me-2">Se Aplica</span>
+                                    <span id="aiTecverdeSeAplica" class="text-muted">-</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-light text-dark border me-2">Classe</span>
+                                    <span id="aiTecverdeClasse" class="text-muted">-</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-light text-dark border me-2">Subclasse</span>
+                                    <span id="aiTecverdeSubclasse" class="text-muted">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Texto da justificativa -->
+                        <div>
+                            <h6 class="mb-2 tech-red-gradient"><i class="fas fa-lightbulb me-2"></i>Justificativa da IA</h6>
+                            <p id="aiTecverdeJustificationText" class="mb-0 text-muted fst-italic">-</p>
+                        </div>
+                        
+                        <!-- Sistema de avaliação da resposta da IA para Tecnologias Verdes -->
+                        <div class="mt-4 pt-3 border-top">
+                            <h6 class="mb-2 tech-red-gradient d-flex align-items-center justify-content-between">
+                                <span><i class="fas fa-star me-2"></i>Avaliação da Resposta</span>
+                                <span>
+                                    {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating > 0 and ai_ratings.tecverde.nome_usuario and ai_ratings.tecverde.timestamp %}
+                                    <span class="badge bg-light text-secondary" title="Última avaliação">
+                                        <i class="fas fa-user-edit me-1"></i>{{ ai_ratings.tecverde.nome_usuario }} - {{ ai_ratings.tecverde.timestamp.split(' ')[0].split('-')|reverse|join('/') }} {{ ai_ratings.tecverde.timestamp.split(' ')[1] }}
+                                        {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating > 0 %}
+                                        <span class="ms-1 badge bg-warning text-dark" title="Nota: {{ ai_ratings.tecverde.rating }}/5">
+                                            <i class="fas fa-star me-1"></i>{{ ai_ratings.tecverde.rating }}
+                                        </span>
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
+                                </span>
+                            </h6>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="ai-rating me-2">
+                                    <i class="far fa-star rating-star" data-value="1" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="2" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="3" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="4" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="5" data-type="tecverde"></i>
+                                </div>
+                                <span id="tecverde-rating-text" class="small text-muted ms-2">Selecione uma avaliação</span>
+                                <input type="hidden" id="tecverde-rating-value" name="tecverde_rating_value" value="{{ ai_ratings.tecverde.rating if ai_ratings and ai_ratings.tecverde }}">
+                            </div>
+                            <div class="form-group">
+                                <textarea class="form-control form-control-sm" id="tecverde-rating-observacoes" 
+                                    name="tecverde_rating_observacoes" rows="2" 
+                                    placeholder="Observações sobre a classificação de tecnologias verdes da IA...">{{ ai_ratings.tecverde.observacoes if ai_ratings and ai_ratings.tecverde }}</textarea>
+                            </div>
+                            <div class="text-end mt-2">
+                                <button type="button" id="saveTecverdeRatingBtn" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    <i class="fas fa-save me-1"></i>Salvar Avaliação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Formulário de categorização -->
+                <div class="card-body border-bottom" style="margin-left: 0.37rem !important; margin-right: 0.30rem !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 w-100">
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 fw-bold tech-red-gradient">Classificação</h5>
+                            {% if project_logs and project_logs|length > 0 %}
+                            <span class="badge bg-light text-secondary ms-2" title="Última atualização">
+                                <i class="fas fa-user-edit me-1"></i>{{ project_logs[0].nome_usuario }} - {{ project_logs[0].data.split(' ')[0].split('-')|reverse|join('/') }} {{ project_logs[0].data.split(' ')[1] }}
+                                {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating %}
+                                <span class="ms-1 badge bg-warning text-dark" title="Avaliação da IA (Tecnologias Verdes): {{ ai_ratings.tecverde.rating }} estrelas">
+                                    <i class="fas fa-star me-1"></i>{{ ai_ratings.tecverde.rating }}
+                                </span>
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-sm p-0 border-0 bg-transparent" id="toggleTecverdeFormBtn">
+                                <i class="fas fa-chevron-up text-primary"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="tecverdeFormContent">
+                        <div class="row g-4">
+                            <!-- Campo para indicar se a tecnologia verde se aplica -->
+                            <div class="col-md-12">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_se_aplica" name="tecverde_se_aplica">
+                                        <option value="">Selecione...</option>
+                                        <option value="1" {% if existing and existing.tecverde_se_aplica == 1 %}selected{% endif %}>Sim</option>
+                                        <option value="0" {% if existing and existing.tecverde_se_aplica == 0 %}selected{% endif %}>Não</option>
+                                    </select>
+                                    <label for="tecverde_se_aplica">Tecnologia Verde se aplica?</label>
+                                </div>
+                                <div class="form-text text-muted mb-3">
+                                    <i class="fas fa-info-circle me-1 mt-2"></i> Indique se o projeto utiliza ou desenvolve Tecnologias Verdes.
+                                </div>
+                            </div>
+                            
+                            <!-- Primeira linha: Classe e Subclasse -->
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_classe" name="tecverde_classe">
+                                        <option value="">Selecione...</option>
+                                        {% for classe, descricao in tecverde_classes.items() %}
+                                            {% if classe %}
+                                            <option value="{{ classe }}" {% if existing and existing.tecverde_classe == classe %}selected{% endif %} title="{{ descricao }}">
+                                                {{ classe }}
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <label for="tecverde_classe">Classe</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_subclasse" name="tecverde_subclasse">
+                                        <option value="">Selecione...</option>
+                                    </select>
+                                    <label for="tecverde_subclasse">Subclasse</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo de Observações -->
+                            <div class="col-md-12 mt-4">
+                                <label for="tecverde_observacoes" class="form-label">
+                                    Observações
+                                </label>
+                                <textarea class="form-control shadow-sm" id="tecverde_observacoes" name="tecverde_observacoes" rows="4" placeholder="Adicione observações relevantes sobre a classificação de tecnologias verdes deste projeto...">{{ existing.tecverde_observacoes if existing and existing.tecverde_observacoes else '' }}</textarea>
+                            </div>
+
+                            <!-- Botão de Salvar Tecnologias Verdes -->
+                            <div class="col-md-12 mt-4 d-flex justify-content-end">
+                                <button type="button" id="saveTecverdeBtn" class="btn btn-success rounded-pill" style="width: 100%;">
+                                    <i class="fas fa-save me-1"></i> SALVAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<!-- Choices.js -->
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+
+<!-- Modal para adicionar novo domínio -->
+<div class="modal fade" id="addDominioModal" tabindex="-1" aria-labelledby="addDominioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addDominioModalLabel">Adicionar Novo Domínio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="novoDominio" class="form-label">Nome do Domínio</label>
+                    <input type="text" class="form-control" id="novoDominio" placeholder="Digite o nome do novo domínio">
+                    <div class="form-text">
+                        <i class="fas fa-info-circle me-1 mt-2"></i> O domínio será adicionado à Macroárea e Segmento selecionados.
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-end">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="saveDominioBtn">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dados de Tecnologias Verdes -->
+<script>
+    // Dados de classes e subclasses de tecnologias verdes
+    var tecverdeClasses = JSON.parse('{{ tecverde_classes|tojson|safe }}');
+    var tecverdeSubclasses = JSON.parse('{{ tecverde_subclasses|tojson|safe }}');
+    
+    console.log("Dados de tecnologias verdes carregados:", {
+        classes: tecverdeClasses,
+        subclasses: tecverdeSubclasses
+    });
+</script>
+
+<!-- Script para posicionar o overlay sobre o card de classificação -->
+<script>
+    // Função para posicionar o overlay sobre o card de classificação
+    function positionOverlayOnCategoryForm() {
+        // Verificar se estamos na página de categorização
+        if (!document.body.classList.contains('categorize-page')) {
+            return;
+        }
+        
+        // Encontrar o card de classificação e o overlay
+        const categoryForm = document.getElementById('categoryForm');
+        const aiLoadingOverlay = document.getElementById('aiLoadingOverlay');
+        
+        if (!categoryForm || !aiLoadingOverlay) {
+            console.warn('Elementos necessários não encontrados para posicionar o overlay');
+            return;
+        }
+        
+        // Adicionar a classe "loaded" ao body para aplicar os estilos específicos
+        document.body.classList.add('loaded');
+        
+        // Mover o overlay para dentro do card de classificação
+        categoryForm.style.position = 'relative';
+        categoryForm.appendChild(aiLoadingOverlay);
+        
+        // Adicionar a classe para posicionar o overlay corretamente
+        aiLoadingOverlay.classList.add('category-form-overlay');
+        
+        console.log('Overlay posicionado sobre o card de classificação');
+    }
+    
+    // Executar quando o DOM estiver carregado
+    document.addEventListener('DOMContentLoaded', function() {
+        // Aguardar um pequeno delay para garantir que todos os elementos estejam renderizados
+        setTimeout(positionOverlayOnCategoryForm, 100);
+    });
+</script>
+
+<script>
+    $(document).ready(function() {
+        // Variáveis para armazenar seleções existentes de tecnologias verdes
+        var existingTecverdeClasse = "{{ existing.tecverde_classe if existing and existing.tecverde_classe else '' }}";
+        var existingTecverdeSubclasse = "{{ existing.tecverde_subclasse if existing and existing.tecverde_subclasse else '' }}";
+        var existingTecverdeSePlica = "{{ existing.tecverde_se_aplica if existing and existing.tecverde_se_aplica else '' }}";
+        
+        // Inicializar Choices.js para os selects múltiplos
+        var dominioChoices = null;
+        var dominioOutrosChoices = null;
+        
+        function initChoices() {
+            // Verificar se estamos no modo de IA e guardar as seleções atuais para restaurá-las após
+            var isAiMode = window.applyingAiSuggestions === true;
+            var currentDominioValues = [];
+            var currentDominioOutrosValues = [];
+            
+            if (isAiMode) {
+                console.log("Iniciando Choices.js em modo IA - preservando valores selecionados");
+                // Salvar as seleções atuais para restaurar após inicialização
+                if ($('#dominio').val()) {
+                    currentDominioValues = Array.isArray($('#dominio').val()) ? 
+                                          $('#dominio').val() : [$('#dominio').val()];
+                    console.log("Valores atuais de domínio a preservar:", currentDominioValues);
+                }
+                
+                if ($('#dominio_outros').val()) {
+                    currentDominioOutrosValues = Array.isArray($('#dominio_outros').val()) ? 
+                                              $('#dominio_outros').val() : [$('#dominio_outros').val()];
+                    console.log("Valores atuais de domínio_outros a preservar:", currentDominioOutrosValues);
+                }
+            }
+            
+            // Destruir instâncias existentes se houver
+            if (dominioChoices) {
+                dominioChoices.destroy();
+            }
+            if (dominioOutrosChoices) {
+                dominioOutrosChoices.destroy();
+            }
+            
+            // Expor as instâncias globalmente para que o script de sugestões da IA possa acessá-las
+            window.dominioChoices = null;
+            window.dominioOutrosChoices = null;
+            
+            // Inicializar Choices.js para o select de domínio
+            dominioChoices = window.dominioChoices = new Choices('#dominio', {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Pesquisar domínios...',
+                placeholder: true,
+                placeholderValue: 'Selecione os domínios',
+                noResultsText: 'Nenhum resultado encontrado',
+                noChoicesText: 'Nenhuma opção disponível',
+                itemSelectText: 'Clique para selecionar',
+                classNames: {
+                    containerOuter: 'choices shadow-sm'
+                }
+            });
+            
+            // Inicializar Choices.js para o select de domínio outros
+            dominioOutrosChoices = window.dominioOutrosChoices = new Choices('#dominio_outros', {
+                removeItemButton: true,
+                searchEnabled: true,
+                searchPlaceholderValue: 'Pesquisar domínios afeitos outros...',
+                placeholder: true,
+                placeholderValue: 'Selecione os domínios afeitos outros',
+                noResultsText: 'Nenhum resultado encontrado',
+                noChoicesText: 'Nenhuma opção disponível',
+                itemSelectText: 'Clique para selecionar',
+                classNames: {
+                    containerOuter: 'choices shadow-sm'
+                }
+            });
+            
+            console.log("Choices.js inicializado para os selects múltiplos");
+            
+            // Se estamos no modo de IA, restaurar os valores que estavam selecionados antes da inicialização
+            if (isAiMode) {
+                // Pequeno delay para garantir que o Choices.js esteja pronto
+                setTimeout(function() {
+                    if (currentDominioValues.length > 0) {
+                        dominioChoices.setChoiceByValue(currentDominioValues);
+                        console.log("Restaurados valores de domínio após inicialização:", currentDominioValues);
+                    }
+                    
+                    if (currentDominioOutrosValues.length > 0) {
+                        dominioOutrosChoices.setChoiceByValue(currentDominioOutrosValues);
+                        console.log("Restaurados valores de domínio_outros após inicialização:", currentDominioOutrosValues);
+                    }
+                }, 100);
+            }
+        }
+        
+        // Função para filtrar subclasses com base na classe de tecnologia verde selecionada
+        function filtrarTecverdeSubclasses() {
+            var classe = $('#tecverde_classe').val();
+            console.log("Filtrando subclasses para classe de tecnologia verde:", classe);
+            
+            // Limpar o select de subclasse
+            $('#tecverde_subclasse').empty();
+            $('#tecverde_subclasse').append(new Option('Selecione...', ''));
+            
+            if (classe && tecverdeSubclasses && tecverdeSubclasses[classe]) {
+                // Obter a string de subclasses
+                var subclassesString = tecverdeSubclasses[classe];
+                
+                // Dividir a string em um array de subclasses
+                var subclassesArray = [];
+                
+                if (subclassesString.includes(';')) {
+                    // Se contém ponto e vírgula, dividir por ponto e vírgula
+                    subclassesArray = subclassesString.split(';').map(function(item) {
+                        return item.trim();
+                    });
+                } else {
+                    // Caso contrário, tratar como uma única subclasse ou dividir por vírgula
+                    if (subclassesString.includes(',')) {
+                        subclassesArray = subclassesString.split(',').map(function(item) {
+                            return item.trim();
+                        });
+                    } else {
+                        // Se não tem separadores, é uma única subclasse
+                        subclassesArray = [subclassesString.trim()];
+                    }
+                }
+                
+                // Adicionar cada subclasse como uma opção
+                subclassesArray.forEach(function(subclasse) {
+                    $('#tecverde_subclasse').append(new Option(subclasse, subclasse));
+                });
+                
+                console.log("Subclasses adicionadas:", subclassesArray);
+                
+                // Restaurar seleção anterior de subclasse se existir
+                if (existingTecverdeSubclasse) {
+                    $('#tecverde_subclasse').val(existingTecverdeSubclasse);
+                    console.log("Restaurada seleção de subclasse:", existingTecverdeSubclasse);
+                }
+            }
+        }
+        
+        // Atualizar subclasses quando a classe mudar
+        $('#tecverde_classe').change(filtrarTecverdeSubclasses);
+        
+        // Inicializar os filtros de tecnologias verdes
+        setTimeout(function() {
+            console.log("Inicializando filtros de tecnologias verdes com valores existentes");
+            
+            // Verificar se há dados existentes do usuário para tecnologias verdes
+            var hasExistingTecverde = existingTecverdeSePlica || existingTecverdeClasse || existingTecverdeSubclasse;
+            
+            if (hasExistingTecverde) {
+                console.log("Usando dados existentes do usuário para tecnologias verdes.");
+                
+                // Aplicar valores existentes
+                if (existingTecverdeSePlica) {
+                    $('#tecverde_se_aplica').val(existingTecverdeSePlica);
+                    console.log("Campo 'Tecnologia Verde se aplica?' definido para:", existingTecverdeSePlica);
+                }
+                
+                if (existingTecverdeClasse) {
+                    $('#tecverde_classe').val(existingTecverdeClasse);
+                    console.log("Classe de tecnologia verde definida para:", existingTecverdeClasse);
+                    
+                    // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
+                    setTimeout(function() {
+                        console.log("Chamando filtrarTecverdeSubclasses após delay...");
+                        filtrarTecverdeSubclasses();
+                    }, 500);
+                }
+                
+                // Forçar verificação imediata após definir os valores
+                verificarTecverdeSePlica();
+            } else if (typeof aiSuggestionData !== 'undefined') {
+                // Se não houver dados existentes do usuário mas houver sugestão da IA
+                console.log("Nenhum dado existente do usuário para tecnologias verdes. Usando sugestões da IA.");
+                
+                if (aiSuggestionData.tecverde_se_aplica) {
+                    // Usar o valor explícito de tecverde_se_aplica
+                    $('#tecverde_se_aplica').val(aiSuggestionData.tecverde_se_aplica);
+                    console.log("Campo 'Tecnologia Verde se aplica?' definido para:", aiSuggestionData.tecverde_se_aplica);
+                } else if (aiSuggestionData.tecverde_classe || aiSuggestionData.tecverde_subclasse) {
+                    // Fallback: se tiver classe ou subclasse mas não tiver o campo se_aplica, definir como "Sim"
+                    $('#tecverde_se_aplica').val("Sim");
+                    console.log("Campo 'Tecnologia Verde se aplica?' definido para 'Sim' com base nas sugestões da IA");
+                }
+                
+                if (aiSuggestionData.tecverde_classe) {
+                    $('#tecverde_classe').val(aiSuggestionData.tecverde_classe);
+                    console.log("Classe de tecnologia verde definida para:", aiSuggestionData.tecverde_classe);
+                    
+                    // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
+                    setTimeout(function() {
+                        console.log("Chamando filtrarTecverdeSubclasses após delay...");
+                        filtrarTecverdeSubclasses();
+                        
+                        // Se houver subclasse na sugestão da IA, aplicá-la após filtrar as opções
+                        if (aiSuggestionData.tecverde_subclasse) {
+                            setTimeout(function() {
+                                $('#tecverde_subclasse').val(aiSuggestionData.tecverde_subclasse);
+                                console.log("Subclasse de tecnologia verde definida para:", aiSuggestionData.tecverde_subclasse);
+                            }, 300);
+                        }
+                    }, 500);
+                }
+                
+                // Forçar verificação imediata após definir os valores
+                verificarTecverdeSePlica();
+            }
+            
+            // Verificar estado dos campos com base no valor "se aplica"
+            verificarTecverdeSePlica();
+            
+        }, 500);
+        
+        // Função para verificar se tecnologia verde se aplica e atualizar os campos
+        function verificarTecverdeSePlica() {
+            var seAplica = $('#tecverde_se_aplica').val();
+            var seAplicaText = $('#tecverde_se_aplica option:selected').text();
+            var hasSelecionado = $('#tecverde_se_aplica option:selected').length > 0;
+            var selectedIndex = document.getElementById('tecverde_se_aplica') ? 
+                               document.getElementById('tecverde_se_aplica').selectedIndex : -1;
+            
+            console.log("Verificando se tecnologia verde se aplica:", {
+                valor: seAplica,
+                texto: seAplicaText,
+                indice: selectedIndex,
+                temSelecionado: hasSelecionado,
+                opcoes: $('#tecverde_se_aplica option').length,
+                elementoExiste: $('#tecverde_se_aplica').length
+            });
+            
+            // Verificar se o campo realmente existe e tem valores
+            if ($('#tecverde_se_aplica').length === 0) {
+                console.error("Elemento tecverde_se_aplica não encontrado!");
+                return;
+            }
+            
+            // Verificar todas as opções disponíveis para depuração
+            $('#tecverde_se_aplica option').each(function(index) {
+                console.log(`Opção ${index}: valor='${$(this).val()}', texto='${$(this).text()}', selecionada=${$(this).is(':selected')}`);
+            });
+            
+            // Verificar se é "Não" pelo valor (com ou sem acento) OU pelo texto OU pelo índice (geralmente índice 2)
+            if (seAplica === "Nao" || seAplicaText === "Não" || selectedIndex === 2) {
+                console.log("APLICANDO NÃO: Desabilitando campos de tecnologias verdes");
+                // Desabilitar apenas os campos de classe e subclasse, mas NÃO o campo de observações
+                $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true);
+                // Adicionar classe visual para indicar campos desabilitados
+                $('#tecverde_classe, #tecverde_subclasse').addClass('bg-light');
+                // Limpar valores dos campos se estiver definido como "Não"
+                $('#tecverde_classe, #tecverde_subclasse').val('');
+                console.log("Campos de classe e subclasse desabilitados e limpos, mantendo observações habilitado");
+            } else if (seAplica === "Sim" || seAplicaText === "Sim" || selectedIndex === 1) {
+                console.log("APLICANDO SIM: Habilitando campos de tecnologias verdes");
+                // Habilitar todos os campos de tecnologias verdes
+                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').prop('disabled', false);
+                // Remover classe visual
+                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').removeClass('bg-light');
+                console.log("Campos de tecnologias verdes habilitados");
+            } else {
+                console.log(`INDEFINIDO: Valor="${seAplica}", Texto="${seAplicaText}", Índice=${selectedIndex}`);
+                // Caso em que não conseguimos determinar se é "Sim" ou "Não"
+                // Desabilitar apenas os campos de classe e subclasse, mantendo observações habilitado
+                $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true);
+                // Adicionar classe visual para indicar campos desabilitados
+                $('#tecverde_classe, #tecverde_subclasse').addClass('bg-light');
+                console.log("Campos de classe e subclasse desabilitados (valor indefinido), mantendo observações habilitado");
+            }
+        }
+        
+        // Verificar inicialmente o estado do campo "se aplica"
+        setTimeout(function() {
+            verificarTecverdeSePlica();
+        }, 600);
+        
+        // Atualizar estado dos campos quando o valor do campo "se aplica" mudar
+        $('#tecverde_se_aplica').change(verificarTecverdeSePlica);
+        
+        // Funcionalidade para expandir/colapsar a seção de tecnologias verdes
+        $('#tecverdeHeader').on('click', function() {
+            $('.tecverde-collapse-icon i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+        
+        // Funcionalidade para expandir/colapsar o formulário de tecnologias verdes
+        $('#toggleTecverdeFormBtn').on('click', function() {
+            $('#tecverdeFormContent').slideToggle();
+            $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+        
+        // O manipulador do botão showTecverdeJustificationBtn é gerenciado pelo arquivo ai_suggestions.js
+        // Remover quaisquer outros manipuladores que possam interferir
+        $('#showTecverdeJustificationBtn').off('click');
+        
+        // Função para formatar valor monetário no padrão brasileiro
+        function formatarValorMonetario(valor) {
+            // Verificar se o valor é uma string e convertê-lo para número
+            if (typeof valor === 'string') {
+                valor = parseFloat(valor.replace(/[^\d.-]/g, ''));
+            }
+            
+            // Verificar se é um número válido
+            if (isNaN(valor)) {
+                return "R$ 0,00";
+            }
+            
+            // Formatar o número com separadores de milhares e decimais no padrão brasileiro
+            return "R$ " + valor.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        // Função para formatar percentual no padrão brasileiro
+        function formatarPercentual(valor) {
+            // Verificar se o valor é uma string e convertê-lo para número
+            if (typeof valor === 'string') {
+                valor = parseFloat(valor.replace(/[^\d.-]/g, ''));
+            }
+            
+            // Verificar se é um número válido
+            if (isNaN(valor)) {
+                return "0,00%";
+            }
+            
+            // Se o valor estiver em formato decimal (ex: 0.25), multiplicar por 100
+            if (valor < 1) {
+                valor = valor * 100;
+            }
+            
+            // Formatar o número com separador decimal no padrão brasileiro
+            return valor.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }) + "%";
+        }
+        
+        // Formatar o valor total
+        var valorTotal = "{{ project._valor_total }}";
+        if (valorTotal) {
+            $('#valor_total_formatado').text(formatarValorMonetario(valorTotal));
+        }
+        
+        // Formatar os percentuais
+        $('.percentual-formatado').each(function() {
+            var valor = $(this).data('valor');
+            if (valor) {
+                $(this).text(formatarPercentual(valor));
+            }
+        });
+        
+        // Dados de domínios organizados por microárea e segmento
+        var dominiosPorMicroareaSegmento = JSON.parse('{{ categories_lists.dominios_por_microarea_segmento_json|safe }}');
+        console.log("Dados carregados:", dominiosPorMicroareaSegmento);
+        
+        // Armazenar todas as opções de segmento originais
+        var todasOpcoesSegmento = [];
+        $('#segmento option').each(function() {
+            todasOpcoesSegmento.push({
+                value: $(this).val(),
+                text: $(this).text()
+            });
+        });
+        console.log("Todas opções de segmento:", todasOpcoesSegmento);
+        
+        // Inicializar variáveis para armazenar seleções existentes
+        var existingMicroarea = "{{ existing.microarea if existing and existing.microarea else '' }}";
+        var existingSegmento = "{{ existing.segmento if existing and existing.segmento else '' }}";
+        var existingDominio = "{{ existing.dominio if existing and existing.dominio else '' }}";
+        var existingDominioOutros = "{{ existing.dominio_outros if existing and existing.dominio_outros else '' }}";
+        
+        // Verificar se há dados existentes do usuário para a área de interesse
+        var hasExistingAreaInteresse = existingMicroarea || existingSegmento || existingDominio || existingDominioOutros;
+        
+        // Se não houver dados existentes do usuário e houver sugestões da IA, usar as sugestões
+        if (!hasExistingAreaInteresse && typeof aiSuggestionData !== 'undefined') {
+            console.log("Nenhum dado existente do usuário para área de interesse. Usando sugestões da IA.");
+            
+            if (aiSuggestionData._aia_n1_macroarea) {
+                existingMicroarea = aiSuggestionData._aia_n1_macroarea;
+                console.log("Usando microárea da IA:", existingMicroarea);
+            }
+            if (aiSuggestionData._aia_n2_segmento) {
+                existingSegmento = aiSuggestionData._aia_n2_segmento;
+                console.log("Usando segmento da IA:", existingSegmento);
+            }
+            if (aiSuggestionData._aia_n3_dominio_afeito) {
+                existingDominio = aiSuggestionData._aia_n3_dominio_afeito;
+                console.log("Usando domínio da IA:", existingDominio);
+            }
+            if (aiSuggestionData._aia_n3_dominio_outro) {
+                existingDominioOutros = aiSuggestionData._aia_n3_dominio_outro;
+                console.log("Usando domínio outros da IA:", existingDominioOutros);
+            }
+        } else if (hasExistingAreaInteresse) {
+            console.log("Usando dados existentes do usuário para área de interesse.");
+        }
+        
+        console.log("Valores a serem aplicados:", {
+            microarea: existingMicroarea,
+            segmento: existingSegmento,
+            dominio: existingDominio,
+            dominio_outros: existingDominioOutros
+        });
+        
+        // Função para filtrar segmentos com base na microárea selecionada
+        function filtrarSegmentos(triggeredByUser = true) {
+            var microarea = $('#microarea').val();
+            console.log("Filtrando segmentos para microárea:", microarea, "| Gatilho do usuário:", triggeredByUser);
+            
+            // Limpar o select de segmento
+            $('#segmento').empty();
+            $('#segmento').append(new Option('Selecione...', ''));
+            
+            if (microarea && dominiosPorMicroareaSegmento && dominiosPorMicroareaSegmento[microarea]) {
+                console.log("Segmentos disponíveis:", Object.keys(dominiosPorMicroareaSegmento[microarea]));
+                
+                // Adicionar apenas os segmentos da microárea selecionada
+                for (var segmento in dominiosPorMicroareaSegmento[microarea]) {
+                    $('#segmento').append(new Option(segmento, segmento));
+                    console.log("Adicionado segmento:", segmento);
+                }
+                
+                // Restaurar seleção anterior de segmento se existir e pertencer à microárea selecionada
+                if (existingSegmento && dominiosPorMicroareaSegmento[microarea][existingSegmento]) {
+                    $('#segmento').val(existingSegmento);
+                    console.log("Restaurada seleção de segmento:", existingSegmento);
+                }
+            } else {
+                console.log("Nenhuma microárea selecionada ou dados não disponíveis, mostrando todos os segmentos");
+                // Se nenhuma microárea selecionada, mostrar todos os segmentos
+                for (var i = 0; i < todasOpcoesSegmento.length; i++) {
+                    if (todasOpcoesSegmento[i].value) {
+                        $('#segmento').append(new Option(todasOpcoesSegmento[i].text, todasOpcoesSegmento[i].value));
+                    }
+                }
+            }
+            
+            // Atualizar os domínios após filtrar os segmentos, mas apenas se for uma mudança manual
+            atualizarDominios(triggeredByUser);
+        }
+        
+        // Função para atualizar os domínios com base na microárea e segmento selecionados
+        function atualizarDominios(triggeredByUser = true) {
+            var microarea = $('#microarea').val();
+            var segmento = $('#segmento').val();
+            console.log("Atualizando domínios para microárea:", microarea, "e segmento:", segmento, "| Gatilho do usuário:", triggeredByUser);
+            
+            // Destruir instâncias existentes de Choices.js antes de limpar os selects
+            if (dominioChoices) {
+                dominioChoices.destroy();
+                dominioChoices = null;
+                window.dominioChoices = null;
+            }
+            if (dominioOutrosChoices) {
+                dominioOutrosChoices.destroy();
+                dominioOutrosChoices = null;
+                window.dominioOutrosChoices = null;
+            }
+            
+            // Limpar os selects de domínios
+            var forceClear = window.applyingAiSuggestions === true;
+            
+            // Sempre limpar os selects para garantir que não haja opções duplicadas
+            $('#dominio').empty();
+            $('#dominio_outros').empty();
+            
+            if (triggeredByUser) {
+                console.log("Selects de domínios limpos devido a mudança manual do usuário (triggeredByUser=true)");
+            } else if (forceClear) {
+                console.log("Selects de domínios limpos para aplicar sugestões da IA (applyingAiSuggestions=true)");
+            } else {
+                console.log("Selects de domínios limpos para carregar opções iniciais (triggeredByUser=false)");
+            }
+            
+            if (microarea && dominiosPorMicroareaSegmento && dominiosPorMicroareaSegmento[microarea]) {
+                console.log("Dados encontrados para a microárea:", microarea);
+                
+                // Criar arrays para armazenar os domínios
+                var dominiosDoSegmentoAtual = [];
+                var dominiosDeOutrosSegmentos = [];
+                
+                // Primeiro, coletar todos os domínios organizados por segmento
+                if (microarea && dominiosPorMicroareaSegmento[microarea]) {
+                    // Processar o segmento selecionado primeiro (se existir)
+                    if (segmento && dominiosPorMicroareaSegmento[microarea][segmento]) {
+                        dominiosDoSegmentoAtual = dominiosPorMicroareaSegmento[microarea][segmento];
+                        console.log("Domínios do segmento selecionado:", dominiosDoSegmentoAtual);
+                    } else {
+                        console.log("Segmento não encontrado ou não selecionado:", segmento);
+                    }
+                    
+                    // Processar todos os outros segmentos da mesma microárea
+                    console.log("Processando domínios de outros segmentos da mesma microárea...");
+                    for (var outroSegmento in dominiosPorMicroareaSegmento[microarea]) {
+                        if (outroSegmento !== segmento) {
+                            console.log("Processando segmento diferente:", outroSegmento);
+                            var dominiosOutroSegmento = dominiosPorMicroareaSegmento[microarea][outroSegmento];
+                            console.log("Domínios do segmento", outroSegmento, ":", dominiosOutroSegmento);
+                            
+                            // Adicionar cada domínio do outro segmento ao array
+                            dominiosDeOutrosSegmentos = dominiosDeOutrosSegmentos.concat(dominiosOutroSegmento);
+                        } else {
+                            console.log("Ignorando segmento atual:", segmento);
+                        }
+                    }
+                }
+                
+                // Agora, adicionar os domínios aos selects correspondentes
+                console.log("Adicionando domínios do segmento atual ao select 'dominio'");
+                for (var i = 0; i < dominiosDoSegmentoAtual.length; i++) {
+                    var dominio = dominiosDoSegmentoAtual[i];
+                    $('#dominio').append(new Option(dominio, dominio));
+                    console.log("Adicionado domínio:", dominio);
+                }
+                
+                console.log("Adicionando domínios de outros segmentos ao select 'dominio_outros'");
+                for (var j = 0; j < dominiosDeOutrosSegmentos.length; j++) {
+                    var dominioOutro = dominiosDeOutrosSegmentos[j];
+                    $('#dominio_outros').append(new Option(dominioOutro, dominioOutro));
+                    console.log("Adicionado domínio outro:", dominioOutro);
+                }
+                
+                // Verificar se o select de domínios outros tem opções
+                var totalOptions = $('#dominio_outros option').length;
+                console.log("Total de opções no select de domínios outros:", totalOptions);
+                console.log("Total de domínios do segmento atual:", dominiosDoSegmentoAtual.length);
+                console.log("Total de domínios de outros segmentos:", dominiosDeOutrosSegmentos.length);
+            } else {
+                console.log("Nenhum dado encontrado para a microárea:", microarea);
+            }
+            
+            // Restaurar seleções anteriores se existirem
+            var dominioArray = [];
+            var dominioOutrosArray = [];
+
+            console.log("Verificando valores existentes e IA:", {
+                existingDominio: existingDominio,
+                existingDominioOutros: existingDominioOutros,
+                isAiMode: window.applyingAiSuggestions
+            });
+
+            // Se estiver no modo de IA e já temos sugestões da IA, não restaurar valores existentes
+            if (window.applyingAiSuggestions && typeof aiSuggestionData !== 'undefined') {
+                console.log("Modo IA ativo com sugestões disponíveis, ignorando valores existentes");
+                // Usar os valores da IA
+                if (aiSuggestionData._aia_n3_dominio_afeito) {
+                    dominioArray = aiSuggestionData._aia_n3_dominio_afeito.split(';').map(d => d.trim());
+                    console.log("Usando valores de domínio da IA:", dominioArray);
+                }
+                
+                if (aiSuggestionData._aia_n3_dominio_outro) {
+                    dominioOutrosArray = aiSuggestionData._aia_n3_dominio_outro.split(';').map(d => d.trim());
+                    console.log("Usando valores de domínio outros da IA:", dominioOutrosArray);
+                }
+            } else {
+                // Usar os valores existentes do formulário
+                if (existingDominio) {
+                    dominioArray = existingDominio.split(';').map(d => d.trim());
+                    console.log("Valores de domínio a serem restaurados:", dominioArray);
+                }
+                
+                if (existingDominioOutros) {
+                    dominioOutrosArray = existingDominioOutros.split(';').map(d => d.trim());
+                    console.log("Valores de domínio outros a serem restaurados:", dominioOutrosArray);
+                }
+                
+                // Verificar também se há valores já selecionados no formulário
+                var currentDominioValues = $('#dominio').val();
+                var currentDominioOutrosValues = $('#dominio_outros').val();
+                
+                if (currentDominioValues && currentDominioValues.length > 0) {
+                    // Se já há valores selecionados, usar esses valores
+                    dominioArray = Array.isArray(currentDominioValues) ? currentDominioValues : [currentDominioValues];
+                    console.log("Usando valores de domínio já selecionados no formulário:", dominioArray);
+                }
+                
+                if (currentDominioOutrosValues && currentDominioOutrosValues.length > 0) {
+                    // Se já há valores selecionados, usar esses valores
+                    dominioOutrosArray = Array.isArray(currentDominioOutrosValues) ? currentDominioOutrosValues : [currentDominioOutrosValues];
+                    console.log("Usando valores de domínio outros já selecionados no formulário:", dominioOutrosArray);
+                }
+            }
+            
+            // Inicializar Choices.js após preencher as opções
+            console.log("Inicializando Choices.js após preenchimento dos selects");
+            initChoices();
+            
+            // Aplicar valores após inicialização do Choices.js com um delay para garantir que o Choices.js esteja pronto
+            setTimeout(function() {
+                console.log("Aplicando valores aos selects após delay");
+                
+                if (dominioArray.length > 0) {
+                    if (dominioChoices) {
+                        dominioChoices.setChoiceByValue(dominioArray);
+                        console.log("Restaurados domínios via Choices.js:", dominioArray);
+                    } else {
+                        $('#dominio').val(dominioArray);
+                        console.log("Restaurados domínios via jQuery:", dominioArray);
+                    }
+                }
+                
+                if (dominioOutrosArray.length > 0) {
+                    if (dominioOutrosChoices) {
+                        dominioOutrosChoices.setChoiceByValue(dominioOutrosArray);
+                        console.log("Restaurados domínios outros via Choices.js:", dominioOutrosArray);
+                    } else {
+                        $('#dominio_outros').val(dominioOutrosArray);
+                        console.log("Restaurados domínios outros via jQuery:", dominioOutrosArray);
+                    }
+                }
+                
+                // Verificar se a seleção foi aplicada corretamente e tentar novamente se necessário
+                var dominioSelectedValues = $('#dominio').val();
+                var dominioOutrosSelectedValues = $('#dominio_outros').val();
+                
+                console.log("Verificação após aplicação - Domínio:", dominioSelectedValues);
+                console.log("Verificação após aplicação - Domínio Outros:", dominioOutrosSelectedValues);
+                
+                if ((dominioArray.length > 0 && (!dominioSelectedValues || dominioSelectedValues.length === 0)) || 
+                    (dominioOutrosArray.length > 0 && (!dominioOutrosSelectedValues || dominioOutrosSelectedValues.length === 0))) {
+                    console.warn("Falha ao restaurar valores. Tentando novamente com delay maior...");
+                    
+                    // Tentar novamente com um delay maior
+                    setTimeout(function() {
+                        console.log("Tentativa final de restauração de valores");
+                        
+                        if (dominioArray.length > 0) {
+                            if (dominioChoices) {
+                                dominioChoices.setChoiceByValue(dominioArray);
+                            } else {
+                                $('#dominio').val(dominioArray);
+                            }
+                        }
+                        
+                        if (dominioOutrosArray.length > 0) {
+                            if (dominioOutrosChoices) {
+                                dominioOutrosChoices.setChoiceByValue(dominioOutrosArray);
+                            } else {
+                                $('#dominio_outros').val(dominioOutrosArray);
+                            }
+                        }
+                    }, 1000);
+                }
+            }, 500);
+        }
+        
+        // Atualizar domínios quando segmento mudar
+        $('#segmento').change(function() {
+            // Apenas se for uma alteração manual (não automática)
+            if (!window.applyingAiSuggestions) {
+                atualizarDominios(true);
+            }
+        });
+        
+        // Atualizar segmentos quando microárea mudar
+        $('#microarea').change(function() {
+            // Apenas se for uma alteração manual (não automática)
+            if (!window.applyingAiSuggestions) {
+                filtrarSegmentos(true);
+            }
+        });
+        
+        // Inicializar os filtros com um atraso maior para garantir que todos os elementos estejam carregados
+        setTimeout(function() {
+            console.log("Inicializando filtros com valores existentes");
+            if (existingMicroarea) {
+                $('#microarea').val(existingMicroarea);
+                console.log("Microárea definida para:", existingMicroarea);
+                
+                // Chamar filtrarSegmentos com um atraso maior para garantir que o valor foi aplicado
+                // e passando false para indicar que não é uma ação do usuário
+                setTimeout(function() {
+                    console.log("Chamando filtrarSegmentos após delay...");
+                    filtrarSegmentos(false); // Isso também chamará atualizarDominios(false)
+                }, 500); // Aumentado para 500ms
+            } else {
+                console.log("Não há microárea existente, chamando atualizarDominios diretamente...");
+                atualizarDominios(false); // Se não houver microárea selecionada, apenas inicializar domínios
+            }
+        }, 500); // Aumentado para 500ms
+        
+        // Inicializar Choices.js mesmo se não houver valores para garantir que os selects estejam prontos
+        setTimeout(function() {
+            if (!dominioChoices && !dominioOutrosChoices) {
+                console.log("Inicializando Choices.js diretamente");
+                initChoices();
+            }
+        }, 1000);
+        
+        // Adicionar o ID do projeto como campo oculto para o script de sugestões da IA
+        var projectId = "{{ project.codigo_projeto if project and project.codigo_projeto else '' }}";
+        if (projectId) {
+            $('form').append('<input type="hidden" id="project_id" value="' + projectId + '">');
+        }
+
+        // Funcionalidade para expandir/colapsar a seção de dados do projeto
+        $('#projectDetailsHeader').on('click', function() {
+            $('.project-collapse-icon i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+        
+        // Funcionalidade para expandir/colapsar a seção de categorização
+        $('#categorizationHeader').on('click', function() {
+            $('.collapse-icon i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+        
+        // Funcionalidade para expandir/colapsar o formulário de categorização
+        $('#toggleFormBtn').on('click', function() {
+            $('#categorizationFormContent').slideToggle();
+            $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+
+        // Variável para controlar o número de classificações adicionais
+        var additionalClassificationCount = 0;
+        const MAX_ADDITIONAL_CLASSIFICATIONS = 3;
+        
+        // Não é mais necessário inicializar Choices.js para os conjuntos adicionais
+        
+        // Função para filtrar segmentos com base na microárea selecionada para um conjunto específico
+        function filtrarSegmentosSet(index) {
+            var microarea = $(`#microarea_set_${index}`).val();
+            console.log(`Filtrando segmentos para microárea do conjunto ${index}:`, microarea);
+            
+            // Limpar o select de segmento
+            $(`#segmento_set_${index}`).empty();
+            $(`#segmento_set_${index}`).append(new Option('Selecione...', ''));
+            
+            if (microarea && dominiosPorMicroareaSegmento && dominiosPorMicroareaSegmento[microarea]) {
+                // Adicionar apenas os segmentos da microárea selecionada
+                for (var segmento in dominiosPorMicroareaSegmento[microarea]) {
+                    $(`#segmento_set_${index}`).append(new Option(segmento, segmento));
+                }
+            } else {
+                // Se nenhuma microárea selecionada, mostrar todos os segmentos
+                for (var i = 0; i < todasOpcoesSegmento.length; i++) {
+                    if (todasOpcoesSegmento[i].value) {
+                        $(`#segmento_set_${index}`).append(new Option(todasOpcoesSegmento[i].text, todasOpcoesSegmento[i].value));
+                    }
+                }
+            }
+        }
+        
+        // Adicionar estilos CSS para os conjuntos de classificação
+        $('<style>')
+            .prop('type', 'text/css')
+            .html(`
+                .additional-classification-set {
+                    margin-bottom: 1.5rem;
+                }
+                .additional-classification-set .card-header {
+                    border-bottom: 1px solid rgba(0,0,0,.125);
+                    background-color: #f8f9fa;
+                }
+                .additional-classification-set .card-body {
+                    padding: 1.25rem;
+                }
+            `)
+            .appendTo('head');
+            
+        // Função para adicionar uma nova classificação (sempre visível)
+        function addClassification() {
+            if (additionalClassificationCount >= MAX_ADDITIONAL_CLASSIFICATIONS) {
+                Swal.fire({
+                    title: 'Limite atingido',
+                    text: 'Você atingiu o limite máximo de 3 classificações adicionais.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            additionalClassificationCount++;
+            const index = additionalClassificationCount;
+            
+            // Criar o HTML para o novo conjunto de classificação (sempre visível)
+            const classificationHTML = `
+                <div class="additional-classification-set card shadow-sm mb-4" id="classification-set-${index}">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold">
+                            <i class="fas fa-layer-group me-2 text-primary"></i>Classificação Adicional #${index}
+                        </h6>
+                        <div class="d-flex">
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill me-2 save-classification-btn" data-index="${index}">
+                                <i class="fas fa-save me-1"></i>Salvar
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill remove-classification-btn" data-index="${index}">
+                                <i class="fas fa-trash-alt me-1"></i>Remover
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" id="classification-body-${index}">
+                        <div class="row g-4">
+                            <!-- Microárea e Segmento -->
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="microarea_set_${index}" name="microarea_set_${index}">
+                                        <option value="">Selecione...</option>
+                                        {% for option in categories_lists.microarea %}
+                                            {% if option %}
+                                            <option value="{{ option }}">{{ option }}</option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <label for="microarea_set_${index}">Macroárea</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="segmento_set_${index}" name="segmento_set_${index}">
+                                        <option value="">Selecione...</option>
+                                    </select>
+                                    <label for="segmento_set_${index}">Segmento</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 text-center">
+                            <div class="alert alert-success save-success-${index}" style="display: none; padding: 0.5rem;">
+                                <i class="fas fa-check-circle me-1"></i> Classificação salva com sucesso!
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Adicionar o HTML ao container
+            $('#additionalClassifications').append(classificationHTML);
+            
+            // Configurar os event listeners para o novo conjunto
+            $(`#microarea_set_${index}`).change(function() {
+                filtrarSegmentosSet(index);
+            });
+            
+            // Inicializar os selects
+            filtrarSegmentosSet(index);
+            
+            // Atualizar o contador no botão
+            updateAddButtonState();
+            
+            console.log(`Conjunto de classificação #${index} adicionado`);
+        }
+        
+        // Função para remover uma classificação
+        function removeClassification(index) {
+            Swal.fire({
+                title: 'Confirmar remoção',
+                text: `Deseja remover a classificação adicional #${index}?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sim, remover',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Remover o conjunto do DOM
+                    $(`#classification-set-${index}`).remove();
+                    
+                    // Decrementar o contador
+                    additionalClassificationCount--;
+                    
+                    // Atualizar o contador no botão
+                    updateAddButtonState();
+                    
+                    console.log(`Conjunto de classificação #${index} removido`);
+                }
+            });
+        }
+        
+        // Função para atualizar o estado do botão de adicionar
+        function updateAddButtonState() {
+            // Contar o número total de classificações adicionais (existentes + novas)
+            var existingClassificationsCount = $('.additional-classifications-display .card').length;
+            var totalClassifications = existingClassificationsCount + additionalClassificationCount;
+            
+            // Calcular slots restantes
+            const remainingSlots = MAX_ADDITIONAL_CLASSIFICATIONS - totalClassifications;
+            
+            // Atualizar texto do botão
+            $('#addClassificationBtn').html(`<i class="fas fa-plus me-1"></i>Adicionar Classificação (${remainingSlots} restantes)`);
+            
+            // Desabilitar o botão se não houver mais slots disponíveis
+            if (remainingSlots <= 0) {
+                $('#addClassificationBtn').addClass('disabled');
+            } else {
+                $('#addClassificationBtn').removeClass('disabled');
+            }
+            
+            console.log(`Estado do botão atualizado: ${remainingSlots} slots restantes (${existingClassificationsCount} existentes + ${additionalClassificationCount} novos = ${totalClassifications} total)`);
+        }
+        
+        // Event listener para o botão de adicionar classificação
+        $('#addClassificationBtn').click(addClassification);
+        
+        // Event listener para os botões de remover classificação (delegação de eventos)
+        $('#additionalClassifications').on('click', '.remove-classification-btn', function() {
+            const index = $(this).data('index');
+            removeClassification(index);
+        });
+        
+        // Inicializar o estado do botão
+        updateAddButtonState();
+        
+        // Função para alternar a visibilidade de um conjunto de classificação
+        function toggleClassificationSet(index) {
+            const $set = $(`#classification-set-${index}`);
+            const $body = $(`#classification-body-${index}`);
+            const $icon = $set.find('.toggle-icon');
+            
+            if ($set.hasClass('expanded')) {
+                // Colapsar
+                $body.slideUp(300);
+                $set.removeClass('expanded');
+                $icon.removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            } else {
+                // Expandir
+                $body.slideDown(300);
+                $set.addClass('expanded');
+                $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+            }
+        }
+        
+        // Event listener para os botões de toggle (usando delegação de eventos)
+        $('#additionalClassifications').on('click', '.toggle-classification-btn', function() {
+            const index = $(this).data('index');
+            toggleClassificationSet(index);
+        });
+        
+        // Event listener para os cabeçalhos de classificação (usando delegação de eventos)
+        $('#additionalClassifications').on('click', '.classification-header', function(e) {
+            // Evitar que o clique nos botões dentro do cabeçalho dispare este evento
+            if ($(e.target).closest('.remove-classification-btn, .toggle-classification-btn').length === 0) {
+                const index = $(this).data('index');
+                toggleClassificationSet(index);
+            }
+        });
+        
+        // Função para garantir que as classificações adicionais estejam expandidas
+        function ensureAdditionalClassificationsExpanded() {
+            $('.additional-classification-set').each(function() {
+                const index = $(this).attr('id').replace('classification-set-', '');
+                console.log(`Verificando estado de expansão da classificação #${index}`);
+                
+                // Forçar a expansão do conjunto
+                const $body = $(`#classification-body-${index}`);
+                const $set = $(`#classification-set-${index}`);
+                const $icon = $set.find('.toggle-icon');
+                
+                $body.show();
+                $set.addClass('expanded');
+                $icon.removeClass('fa-chevron-down').addClass('fa-chevron-up');
+                
+                console.log(`Classificação #${index} expandida com sucesso`);
+            });
+        }
+        
+        // Carregar classificações adicionais existentes se houver
+        function loadExistingAdditionalClassifications() {
+            var existingAdditionalClassificationsData = document.getElementById('existing_additional_classifications');
+            if (existingAdditionalClassificationsData && existingAdditionalClassificationsData.value) {
+                try {
+                    // Tenta fazer o parse do JSON
+                    var value = existingAdditionalClassificationsData.value;
+                    console.log("Valor original das classificações adicionais:", value);
+                    
+                    // Verifica se o valor já é um objeto (pode acontecer em alguns navegadores)
+                    var existingAdditionalClassifications;
+                    if (typeof value === 'object' && value !== null) {
+                        existingAdditionalClassifications = value;
+                    } else {
+                        // Tenta remover aspas extras que podem estar causando o problema
+                        if (value.startsWith('"') && value.endsWith('"')) {
+                            value = value.slice(1, -1).replace(/\\"/g, '"');
+                        }
+                        existingAdditionalClassifications = JSON.parse(value);
+                    }
+                    
+                    console.log("Classificações adicionais após parse:", existingAdditionalClassifications);
+                    
+                    // Se existem classificações adicionais, garantir que a seção esteja visível
+                    if (existingAdditionalClassifications && existingAdditionalClassifications.length > 0) {
+                        // Garantir que a seção de classificações adicionais esteja visível
+                        $('#additionalClassifications').show();
+                        
+                        console.log("Carregando " + existingAdditionalClassifications.length + " classificações adicionais existentes");
+                        
+                        // Verificar se já atingiu o limite máximo
+                        var existingCount = existingAdditionalClassifications.length;
+                        var newCount = Math.min(existingCount, MAX_ADDITIONAL_CLASSIFICATIONS);
+                        
+                        // Adicionar cada classificação adicional existente (até o limite máximo)
+                        for (var i = 0; i < newCount; i++) {
+                            // Adicionar um novo conjunto
+                            addClassification();
+                            
+                            // Preencher com os valores existentes
+                            var classification = existingAdditionalClassifications[i];
+                            var index = i + 1; // Os índices começam em 1
+                            
+                            console.log("Carregando classificação adicional #" + index + ":", classification);
+                            
+                            // Definir os valores dos campos
+                            $("#microarea_set_" + index).val(classification.microarea);
+                            
+                            // Atualizar os segmentos com base na microárea selecionada
+                            filtrarSegmentosSet(index);
+                            
+                            // Definir o segmento após filtrar as opções com um delay maior para garantir que os segmentos foram carregados
+                            (function(idx, seg) {
+                                setTimeout(function() {
+                                    $("#segmento_set_" + idx).val(seg);
+                                    console.log("Segmento definido para classificação adicional #" + idx + ":", seg);
+                                }, 300); // Aumentado para 300ms para garantir que os segmentos foram carregados
+                            })(index, classification.segmento);
+                        }
+                        
+                        // Atualizar o estado do botão após carregar as classificações existentes
+                        updateAddButtonState();
+                    }
+                } catch (e) {
+                    console.error("Erro ao carregar classificações adicionais:", e);
+                    console.log("Valor que causou o erro:", existingAdditionalClassificationsData.value);
+                }
+            }
+            
+            // Atualizar o estado do botão mesmo se não houver classificações adicionais
+            updateAddButtonState();
+        }
+        
+        // Função para remover uma classificação existente
+        function removeExistingClassification(index) {
+            Swal.fire({
+                title: 'Confirmar remoção',
+                text: `Deseja remover esta classificação adicional?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Sim, remover',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    try {
+                        // Mostrar loading
+                        Swal.fire({
+                            title: 'Removendo...',
+                            text: 'Aguarde enquanto removemos a classificação adicional...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        
+                        // Preparar os dados para envio
+                        const projectId = $('#project_id').val();
+                        const data = {
+                            project_id: projectId,
+                            index: index
+                        };
+                        
+                        // Enviar os dados via AJAX para remover a classificação no servidor
+                        $.ajax({
+                            url: `/remove_additional_classification/${projectId}`,
+                            type: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify(data),
+                            success: function(response) {
+                                // Obter as classificações adicionais existentes
+                                var existingAdditionalClassificationsData = document.getElementById('existing_additional_classifications');
+                                if (existingAdditionalClassificationsData && existingAdditionalClassificationsData.value) {
+                                    // Método alternativo: Obter as classificações diretamente da UI
+                                    var classifications = [];
+                                    $('.additional-classifications-display .card').each(function(i) {
+                                        if (i + 1 !== index) { // Pular o item que estamos removendo
+                                            var microarea = $(this).find('.fw-bold').text().trim();
+                                            var segmento = $(this).find('.text-muted').text().replace('/', '').trim();
+                                            classifications.push({
+                                                microarea: microarea,
+                                                segmento: segmento
+                                            });
+                                        }
+                                    });
+                                    
+                                    console.log("Classificações obtidas da UI após remoção:", classifications);
+                                    
+                                    // Atualizar o campo hidden com as classificações reconstruídas
+                                    existingAdditionalClassificationsData.value = JSON.stringify(classifications);
+                                    
+                                    // Remover o elemento da UI
+                                    $(`#existing-classification-${index}`).remove();
+                                    
+                                    // Atualizar a numeração das classificações restantes
+                                    $('.additional-classifications-display .card').each(function(i) {
+                                        const newIndex = i + 1;
+                                        $(this).attr('id', `existing-classification-${newIndex}`);
+                                        $(this).find('.badge').text(newIndex);
+                                        $(this).find('.remove-existing-classification-btn').attr('data-index', newIndex);
+                                    });
+                                    
+                                    // Se não houver mais classificações adicionais, esconder o botão de remover todas
+                                    if (classifications.length === 0) {
+                                        $('#removeAllClassificationsBtn').hide();
+                                        $('.additional-classifications-display').empty();
+                                    }
+                                    
+                                    // Atualizar o estado do botão de adicionar classificação
+                                    updateAddButtonState();
+                                }
+                                
+                                // Mostrar mensagem de sucesso
+                                Swal.fire({
+                                    title: 'Removida!',
+                                    text: 'Classificação adicional removida com sucesso.',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false
+                                });
+                                
+                                console.log('Classificação adicional removida com sucesso:', response);
+                            },
+                            error: function(xhr, status, error) {
+                                // Mostrar mensagem de erro
+                                Swal.fire({
+                                    title: 'Erro!',
+                                    text: xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Ocorreu um erro ao remover a classificação adicional.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
+                                console.error('Erro ao remover classificação adicional:', error);
+                                console.error('Resposta do servidor:', xhr.responseText);
+                            }
+                        });
+                    } catch (e) {
+                        console.error("Erro ao remover classificação adicional:", e);
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: 'Ocorreu um erro ao remover a classificação adicional: ' + e.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                }
+            });
+        }
+        
+        // Função para salvar uma classificação adicional individualmente
+        function saveAdditionalClassification(index) {
+            // Verificar se os campos estão preenchidos
+            const microarea = $(`#microarea_set_${index}`).val();
+            const segmento = $(`#segmento_set_${index}`).val();
+            
+            if (!microarea || !segmento) {
+                Swal.fire({
+                    title: 'Campos incompletos',
+                    text: 'Por favor, preencha a Macroárea e o Segmento antes de salvar.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            // Mostrar loading
+            Swal.fire({
+                title: 'Salvando...',
+                text: 'Aguarde enquanto salvamos a classificação adicional...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Preparar os dados para envio
+            const projectId = $('#project_id').val();
+            const data = {
+                project_id: projectId,
+                index: index,
+                microarea: microarea,
+                segmento: segmento
+            };
+            
+            // Enviar os dados via AJAX
+            $.ajax({
+                url: `/save_additional_classification/${projectId}`,
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    // Mostrar mensagem de sucesso
+                    Swal.close();
+                    
+                    // Mostrar a mensagem de sucesso no card
+                    $(`.save-success-${index}`).fadeIn().delay(2000).fadeOut();
+                    
+                    console.log('Classificação adicional salva com sucesso:', response);
+                },
+                error: function(xhr, status, error) {
+                    // Mostrar mensagem de erro
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Ocorreu um erro ao salvar a classificação adicional.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    console.error('Erro ao salvar classificação adicional:', error);
+                    console.error('Resposta do servidor:', xhr.responseText);
+                }
+            });
+        }
+        
+        // Event listener para os botões de salvar classificação (delegação de eventos)
+        $('#additionalClassifications').on('click', '.save-classification-btn', function() {
+            const index = $(this).data('index');
+            saveAdditionalClassification(index);
+        });
+        
+        // Event listener para os botões de remover classificação existente
+        $('.remove-existing-classification-btn').click(function() {
+            const index = $(this).data('index');
+            removeExistingClassification(index);
+        });
+        
+        // Chamar a função de carregamento quando o documento estiver pronto
+        loadExistingAdditionalClassifications();
+        
+        // Verificar novamente após o carregamento completo da página
+        $(window).on('load', function() {
+            console.log("Página totalmente carregada, verificando classificações adicionais...");
+            setTimeout(ensureAdditionalClassificationsExpanded, 500);
+        });
+        
+        // Variável para rastrear se o usuário modificou os campos
+        var userModifiedForm = false;
+        // Variável para rastrear se estamos aplicando sugestões da IA
+        window.applyingAiSuggestions = false;
+        
+        // Adicionar event listeners para todos os campos do formulário
+        $('#microarea, #segmento, #dominio, #dominio_outros').on('change', function(e) {
+            // Verificar se a mudança foi feita pelo usuário (não pelo script de sugestões)
+            if (!window.applyingAiSuggestions) {
+                userModifiedForm = true;
+                $('#user_modified').val('true');
+                
+                // Registrar qual campo foi alterado manualmente
+                const campoAlterado = $(this).attr('id');
+                console.log("Usuário modificou o formulário. Campo alterado:", campoAlterado);
+                
+                // Se o usuário alterou manualmente a macroárea ou segmento, vamos registrar isso
+                if (campoAlterado === 'microarea' || campoAlterado === 'segmento') {
+                    console.log("Detecção de mudança manual nos seletores principais - os domínios serão limpos");
+                }
+            }
+        });
+        
+        // Registrar explicitamente quando uma mudança em Select2/Choices.js ocorre via UI
+        $(document).on('choice-selected', '.choices__item--selectable', function(e) {
+            if (!window.applyingAiSuggestions) {
+                console.log("Usuário selecionou manualmente um item no Choices.js");
+                userModifiedForm = true;
+                $('#user_modified').val('true');
+            }
+        });
+        
+        // Expor as funções globalmente para o script de sugestões da IA
+        window.filtrarSegmentos = filtrarSegmentos;
+        window.atualizarDominios = atualizarDominios;
+        
+        // Definir tema personalizado para SweetAlert
+        const greenGradientButtonStyle = {
+            confirmButtonColor: '#28a745',
+            confirmButtonText: 'Sim, salvar',
+            customClass: {
+                confirmButton: 'btn-green-gradient'
+            }
+        };
+        
+        // Adicionar estilo CSS para o botão com gradiente verde
+        $('<style>')
+            .prop('type', 'text/css')
+            .html(`
+                .btn-green-gradient {
+                    background: linear-gradient(135deg, #28a745, #20c997) !important;
+                    border: none !important;
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+                }
+                .btn-green-gradient:hover {
+                    background: linear-gradient(135deg, #218838, #1ba87e) !important;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+                }
+            `)
+            .appendTo('head');
+        
+        // Adicionar event listeners para os campos de tecnologias verdes
+        $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').on('change', function(e) {
+            // Verificar se a mudança foi feita pelo usuário (não pelo script de sugestões)
+            if (!window.applyingAiSuggestions) {
+                userModifiedForm = true;
+                $('#user_modified').val('true');
+                console.log("Usuário modificou o formulário de tecnologias verdes. Campo alterado:", $(this).attr('id'));
+            }
+        });
+        
+        // Manipular o envio do formulário
+        $('form').on('submit', function(e) {
+            e.preventDefault(); // Impedir o envio padrão do formulário
+            
+            // Coletar as classificações adicionais existentes
+            var existingClassifications = [];
+            $('.additional-classifications-display .card').each(function() {
+                var microarea = $(this).find('.fw-bold').text().trim();
+                var segmento = $(this).find('.text-muted').text().replace('/', '').trim();
+                existingClassifications.push({
+                    microarea: microarea,
+                    segmento: segmento
+                });
+            });
+            
+            // Coletar as novas classificações adicionais
+            for (var i = 1; i <= additionalClassificationCount; i++) {
+                var microarea = $(`#microarea_set_${i}`).val();
+                var segmento = $(`#segmento_set_${i}`).val();
+                
+                if (microarea && segmento) {
+                    existingClassifications.push({
+                        microarea: microarea,
+                        segmento: segmento
+                    });
+                }
+            }
+            
+            // Adicionar um campo hidden com todas as classificações adicionais
+            if (existingClassifications.length > 0) {
+                // Remover o campo existente se houver
+                $('#existing_additional_classifications').remove();
+                
+                // Adicionar o novo campo
+                $('<input>')
+                    .attr('type', 'hidden')
+                    .attr('name', 'additional_classifications')
+                    .attr('value', JSON.stringify(existingClassifications))
+                    .appendTo(this);
+                
+                console.log("Classificações adicionais a serem enviadas:", existingClassifications);
+            }
+            
+            // Mostrar SweetAlert de confirmação
+            Swal.fire({
+                title: 'Confirmar',
+                text: 'Deseja salvar estas classificações para o projeto?',
+                icon: 'question',
+                showCancelButton: true,
+                cancelButtonColor: '#d33',
+                cancelButtonText: 'Cancelar',
+                ...greenGradientButtonStyle
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Mostrar loading
+                    Swal.fire({
+                        title: 'Salvando...',
+                        text: 'Aguarde enquanto salvamos...',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Obter os dados do formulário
+                    var formData = new FormData(this);
+                    
+                    // Enviar os dados via AJAX
+                    $.ajax({
+                        url: window.location.href,
+                        type: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            // Mostrar mensagem de sucesso que fecha automaticamente
+                            Swal.fire({
+                                title: 'Sucesso!',
+                                text: 'Classificações salvas com sucesso',
+                                icon: 'success',
+                                timer: 1500,
+                                timerProgressBar: true,
+                                showConfirmButton: false
+                            });
+                            
+                            // Não redirecionar, manter na página atual
+                        },
+                        error: function(xhr, status, error) {
+                            // Mostrar mensagem de erro
+                            Swal.fire({
+                                title: 'Erro!',
+                                text: 'Ocorreu um erro ao salvar: ' + error,
+                                icon: 'error',
+                                ...greenGradientButtonStyle,
+                                confirmButtonText: 'OK'
+                            });
+                            console.error('Erro ao salvar:', error);
+                            console.error('Resposta do servidor:', xhr.responseText);
+                        }
+                    });
+                }
+            });
+        });
+
+        // Função para salvar tecnologias verdes
+        $('#saveTecverdeBtn').click(function() {
+            // Obter os valores dos campos
+            var tecverdeData = {
+                tecverde_se_aplica: $('#tecverde_se_aplica').val(),
+                tecverde_classe: $('#tecverde_classe').val(),
+                tecverde_subclasse: $('#tecverde_subclasse').val(),
+                tecverde_observacoes: $('#tecverde_observacoes').val()
+            };
+
+            // Validar o campo "se aplica"
+            if (!tecverdeData.tecverde_se_aplica) {
+                Swal.fire({
+                    title: 'Campo obrigatório',
+                    text: 'Por favor, indique se o projeto aplica Tecnologias Verdes',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+
+            // Se "Não se aplica", não é necessário validar os outros campos
+            if (tecverdeData.tecverde_se_aplica === "Não" || tecverdeData.tecverde_se_aplica === "Nao") {
+                // Limpar os valores dos outros campos
+                tecverdeData.tecverde_classe = "";
+                tecverdeData.tecverde_subclasse = "";
+                // Garantir que o valor seja "Nao" sem acento para consistência
+                tecverdeData.tecverde_se_aplica = "Nao";
+            }
+
+            // Mostrar loading
+            Swal.fire({
+                title: 'Salvando...',
+                text: 'Aguarde enquanto salvamos as tecnologias verdes...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Enviar dados para o servidor
+            $.ajax({
+                url: '/save_tecverde/{{ project.codigo_projeto }}',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(tecverdeData),
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            text: 'Tecnologias verdes salvas com sucesso!',
+                            icon: 'success',
+                            timer: 1500,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
+                        
+                        // Recarregar os domínios após salvar as tecnologias verdes
+                        setTimeout(function() {
+                            console.log("Recarregando domínios após salvar tecnologias verdes...");
+                            
+                            // Verificar se há microárea e segmento selecionados
+                            var microarea = $('#microarea').val();
+                            var segmento = $('#segmento').val();
+                            
+                            if (microarea && segmento) {
+                                // Recarregar os domínios com base na microárea e segmento atuais
+                                atualizarDominios(false);
+                                console.log("Domínios recarregados após salvar tecnologias verdes");
+                            } else {
+                                console.log("Não foi possível recarregar domínios: microárea ou segmento não selecionados");
+                            }
+                        }, 500);
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.error || 'Erro ao salvar tecnologias verdes',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro ao salvar tecnologias verdes',
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        });
+
+        // Verificar inicialmente o estado do campo "se aplica"
+        setTimeout(function() {
+            verificarTecverdeSePlica();
+        }, 600);
+
+        // Função específica para garantir que o valor "Não" seja aplicado corretamente no load da página
+        function garantirValorTecverde() {
+            // Verificar se há sugestões da IA para tecverde_se_aplica
+            if (typeof aiSuggestionData !== 'undefined' && (aiSuggestionData.tecverde_se_aplica === "Não" || aiSuggestionData.tecverde_se_aplica === "Nao")) {
+                console.log("Verificando aplicação de 'Não' em tecverde_se_aplica durante inicialização");
+                
+                // Verificar tanto o valor quanto o texto da opção selecionada
+                const valorAtual = $('#tecverde_se_aplica').val();
+                const textoSelecionado = $('#tecverde_se_aplica option:selected').text();
+                console.log("Estado atual:", {valor: valorAtual, texto: textoSelecionado});
+                
+                // Se nem o valor nem o texto for "Não"
+                if (valorAtual !== "Nao" && textoSelecionado !== "Não") {
+                    console.log("Valor atual não é 'Não', tentando aplicar pelo índice");
+                    
+                    // Abordagem por índice: selecionar a terceira opção (índice 2) que deve ser "Não"
+                    const selectElement = document.getElementById('tecverde_se_aplica');
+                    if (selectElement && selectElement.options.length >= 3) {
+                        // Listar todas as opções para depuração
+                        console.log("Opções disponíveis:");
+                        for (let i = 0; i < selectElement.options.length; i++) {
+                            console.log(`  [${i}]: valor='${selectElement.options[i].value}', texto='${selectElement.options[i].text}'`);
+                        }
+                        
+                        // Selecionar a terceira opção (índice 2) que deve ser "Não"
+                        selectElement.selectedIndex = 2;
+                        console.log("Selecionado índice 2, que deve ser 'Não'");
+                        
+                        // Verificar qual opção foi realmente selecionada
+                        const opcaoSelecionada = selectElement.options[selectElement.selectedIndex];
+                        console.log("Opção selecionada:", {
+                            indice: selectElement.selectedIndex,
+                            texto: opcaoSelecionada.text,
+                            valor: opcaoSelecionada.value
+                        });
+                    } else {
+                        console.error("Estrutura do select diferente do esperado:", {
+                            existe: !!selectElement,
+                            numeroOpcoes: selectElement ? selectElement.options.length : 0
+                        });
+                        
+                        // Tentar o método baseado em valor como fallback
+                        $('#tecverde_se_aplica').val("Nao");
+                        console.log("Tentando aplicar 'Nao' pelo valor (fallback)");
+                    }
+                    
+                    // Forçar o evento change via jQuery
+                    $('#tecverde_se_aplica').trigger('change');
+                    
+                    // Criar e disparar um evento change nativo
+                    if (selectElement) {
+                        const event = new Event('change', { bubbles: true });
+                        selectElement.dispatchEvent(event);
+                        console.log("Evento change nativo disparado");
+                    }
+                    
+                    // Verificar novamente após aplicação
+                    const valorAposChange = $('#tecverde_se_aplica').val();
+                    const textoAposChange = $('#tecverde_se_aplica option:selected').text();
+                    console.log("Após aplicação:", {valor: valorAposChange, texto: textoAposChange});
+                    
+                    // Aplicar também à função verificarTecverdeSePlica
+                    verificarTecverdeSePlica();
+                } else {
+                    console.log("Valor 'Não' já está aplicado corretamente");
+                }
+            }
+        }
+        
+        // Chamar a função após a página estar totalmente carregada
+        $(window).on('load', function() {
+            setTimeout(garantirValorTecverde, 1000);
+
+            // Código de depuração avançada e solução definitiva
+            setTimeout(function() {
+                console.log("==== DIAGNÓSTICO AVANÇADO DO PROBLEMA COM O VALOR 'NÃO' ====");
+                
+                // 1. Verificar todas as opções do select em detalhes
+                const select = document.getElementById('tecverde_se_aplica');
+                if (select) {
+                    console.log("Total de opções no select:", select.options.length);
+                    
+                    for (let i = 0; i < select.options.length; i++) {
+                        const option = select.options[i];
+                        console.log(`Opção ${i}:`, {
+                            valor: option.value,
+                            texto: option.text,
+                            // Verificar os caracteres individuais como códigos para detectar problemas de codificação
+                            valorCharCodes: Array.from(option.value).map(c => c.charCodeAt(0)),
+                            textoCharCodes: Array.from(option.text).map(c => c.charCodeAt(0)),
+                            selected: option.selected
+                        });
+                    }
+                }
+                
+                // 2. SOLUÇÃO DEFINITIVA: Modificar diretamente o HTML da terceira opção
+                if (select && select.options.length >= 3) {
+                    // Vamos garantir que a terceira opção (índice 2) tenha um valor ASCII sem acentos
+                    const option = select.options[2];
+                    
+                    // Problema: Pode haver um problema com o valor "Não" devido ao "ã"
+                    // Solução: Vamos mudar o valor para algo mais simples, mantendo o texto original
+                    if (option.text === "Não") {
+                        const valorAntigo = option.value;
+                        option.value = "Nao"; // Valor sem acento, mas mantendo o texto com acento
+                        
+                        console.log(`Modificada opção 'Não': valor alterado de '${valorAntigo}' para 'Nao'`);
+                        console.log("Opção 'Não' após modificação:", {
+                            valor: option.value,
+                            texto: option.text,
+                            valorCharCodes: Array.from(option.value).map(c => c.charCodeAt(0)),
+                            textoCharCodes: Array.from(option.text).map(c => c.charCodeAt(0))
+                        });
+                    }
+                }
+                
+                // 3. Se o aiSuggestionData indica "Não", agora vamos forçar a seleção definitivamente
+                if (typeof aiSuggestionData !== 'undefined' && (aiSuggestionData.tecverde_se_aplica === "Não" || aiSuggestionData.tecverde_se_aplica === "Nao")) {
+                    console.log("Tentando aplicar 'Não' depois da modificação do valor...");
+                    
+                    if (select && select.options.length >= 3) {
+                        // Limpar seleção atual
+                        select.selectedIndex = -1;
+                        
+                        // Definir a opção "Não" (agora com valor "Nao")
+                        select.options[2].selected = true;
+                        select.selectedIndex = 2;
+                        
+                        // Especificamente para o caso da opção "Não", também tentar pelo valor modificado
+                        if ($('#tecverde_se_aplica').val() !== "Nao") {
+                            $('#tecverde_se_aplica').val("Nao");
+                        }
+                        
+                        // Forçar o disparo do evento change
+                        $('#tecverde_se_aplica').trigger('change');
+                        
+                        console.log("Estado final do select após aplicação forçada:", {
+                            selectedIndex: select.selectedIndex,
+                            selectedValue: select.value,
+                            selectedText: select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'nenhum',
+                            jqueryVal: $('#tecverde_se_aplica').val()
+                        });
+                    }
+                    
+                    // Forçar a verificação após a aplicação
+                    verificarTecverdeSePlica();
+                }
+                
+                console.log("==== FIM DO DIAGNÓSTICO ====");
+            }, 1500);
+        });
+    });
+</script>
+<!-- Incluir o script de sugestões da IA -->
+<script src="{{ url_for('static', filename='js/ai_suggestions.js') }}"></script>
+
+<!-- Script para salvar todos os formulários -->
+<script src="{{ url_for('static', filename='js/save_all.js') }}"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializar o botão de salvar tudo
+        $('#saveAllFormsBtn').click(function() {
+            saveAllForms();
+        });
+        
+        // Script adicional para garantir que o campo de observações de tecnologias verdes esteja sempre habilitado
+        // Garantir que o campo de observações de tecnologias verdes esteja sempre habilitado
+        function garantirCampoObservacoesHabilitado() {
+            console.log("Garantindo que o campo de observações de tecnologias verdes esteja habilitado...");
+            $('#tecverde_observacoes').prop('disabled', false).removeClass('bg-light');
+            
+            // Verificar se temos dados de sugestão da IA
+            if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
+                const justificativa = aiSuggestionData.tecverde_justificativa || '';
+                const seAplica = aiSuggestionData.tecverde_se_aplica || '';
+                
+                // Garantir que a seção de tecnologias verdes da IA esteja visível se houver dados
+                if (justificativa || seAplica || aiSuggestionData.tecverde_confianca) {
+                    console.log("Garantindo que a seção de tecnologias verdes da IA esteja visível");
+                    $('#aiTecverdeSuggestionSection').show();
+                }
+                
+                if (justificativa) {
+                    console.log("Verificando se é necessário aplicar justificativa da IA...");
+                    
+                    // Verificar se o campo de observações está vazio
+                    const observacoesAtuais = $('#tecverde_observacoes').val();
+                    
+                    if (!observacoesAtuais || observacoesAtuais.trim() === '') {
+                        console.log("Campo de observações vazio, aplicando justificativa da IA...");
+                        
+                        // Formatar a justificativa de acordo com o valor de "se aplica"
+                        let textoJustificativa = justificativa;
+                        if (seAplica === "Não" || seAplica === "Nao") {
+                            textoJustificativa = "Motivo para não se aplicar: " + justificativa;
+                        }
+                        
+                        // Inserir a justificativa no campo de observações
+                        $('#tecverde_observacoes').val(textoJustificativa);
+                        console.log("Justificativa inserida com sucesso:", textoJustificativa);
+                    } else {
+                        console.log("Campo de observações já preenchido:", observacoesAtuais);
+                    }
+                }
+            }
+        }
+        
+        // Executar ao carregar a página com um atraso para garantir que outros scripts foram executados
+        setTimeout(garantirCampoObservacoesHabilitado, 3000);
+        
+        // Executar também quando houver mudança no campo "se aplica"
+        $('#tecverde_se_aplica').change(function() {
+            // Breve delay para garantir que outros manipuladores de evento sejam executados primeiro
+            setTimeout(garantirCampoObservacoesHabilitado, 300);
+        });
+        
+        // Executar repetidamente nos primeiros 10 segundos para garantir que seja aplicado
+        for (let i = 1; i <= 5; i++) {
+            setTimeout(garantirCampoObservacoesHabilitado, i * 2000); // Executar a cada 2 segundos durante 10 segundos
+        }
+        
+        // Função para forçar o recarregamento dos domínios
+        function forcarRecarregamentoDominios() {
+            console.log("Forçando recarregamento dos domínios...");
+            
+            // Verificar se há microárea e segmento selecionados
+            var microarea = $('#microarea').val();
+            var segmento = $('#segmento').val();
+            
+            if (microarea && segmento) {
+                // Recarregar os domínios com base na microárea e segmento atuais
+                console.log("Recarregando domínios para microárea:", microarea, "e segmento:", segmento);
+                
+                // Usar um pequeno delay para garantir que outros scripts foram executados
+                setTimeout(function() {
+                    atualizarDominios(false);
+                    console.log("Domínios recarregados forçadamente");
+                }, 500);
+            } else {
+                console.log("Não foi possível recarregar domínios: microárea ou segmento não selecionados");
+            }
+        }
+        
+        // Executar o recarregamento forçado dos domínios quando a página estiver totalmente carregada
+        $(window).on('load', function() {
+            // Usar um delay maior para garantir que outros scripts foram executados
+            setTimeout(forcarRecarregamentoDominios, 2000);
+        });
+    });
+</script>
+
+<!-- Scripts relacionados ao botão de adicionar domínio -->
+<script>
+    $(document).ready(function() {
+        // Controlar a ativação do botão de adicionar domínio
+        function checkAddDominioButtonState() {
+            var microarea = $('#microarea').val();
+            var segmento = $('#segmento').val();
+            
+            if (microarea && segmento) {
+                $('#addDominioBtn').removeClass('disabled');
+            } else {
+                $('#addDominioBtn').addClass('disabled');
+            }
+        }
+        
+        // Verificar o estado do botão quando os selects mudam
+        $('#microarea, #segmento').change(function() {
+            checkAddDominioButtonState();
+        });
+        
+        // Verificar inicialmente
+        setTimeout(checkAddDominioButtonState, 1000);
+        
+        // Abrir o modal quando o botão for clicado
+        $('#addDominioBtn').click(function() {
+            if (!$(this).hasClass('disabled')) {
+                $('#novoDominio').val('');
+                $('#addDominioModal').modal('show');
+            }
+        });
+        
+        // Salvar o novo domínio quando o botão de salvar for clicado
+        $('#saveDominioBtn').click(function() {
+            var novoDominio = $('#novoDominio').val().trim();
+            
+            if (!novoDominio) {
+                Swal.fire({
+                    title: 'Campo vazio',
+                    text: 'Por favor, digite o nome do novo domínio',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            var microarea = $('#microarea').val();
+            var segmento = $('#segmento').val();
+            
+            // Verificar se o domínio já existe no select
+            var dominioExistente = false;
+            if (dominioChoices) {
+                var escolhas = dominioChoices.getValue();
+                for (var i = 0; i < escolhas.length; i++) {
+                    if (escolhas[i].value.toLowerCase() === novoDominio.toLowerCase()) {
+                        dominioExistente = true;
+                        break;
+                    }
+                }
+                
+                // Verificar também nas opções disponíveis (não apenas selecionadas)
+                var opcoes = dominioChoices._currentState.choices;
+                for (var i = 0; i < opcoes.length; i++) {
+                    if (opcoes[i].value.toLowerCase() === novoDominio.toLowerCase()) {
+                        dominioExistente = true;
+                        break;
+                    }
+                }
+            } else {
+                // Fallback para o select nativo se Choices.js não estiver disponível
+                $('#dominio option').each(function() {
+                    if ($(this).val().toLowerCase() === novoDominio.toLowerCase()) {
+                        dominioExistente = true;
+                        return false; // Sair do loop
+                    }
+                });
+            }
+            
+            if (dominioExistente) {
+                Swal.fire({
+                    title: 'Domínio existente',
+                    text: 'Este domínio já existe para esta combinação de Macroárea e Segmento.',
+                    icon: 'warning',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+                return;
+            }
+            
+            // Mostrar loading
+            Swal.fire({
+                title: 'Salvando...',
+                text: 'Aguarde enquanto salvamos o novo domínio...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Preparar os dados para envio
+            const data = {
+                microarea: microarea,
+                segmento: segmento,
+                dominio: novoDominio
+            };
+            
+            // Enviar os dados via AJAX
+            $.ajax({
+                url: '/add_dominio',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    if (response.success) {
+                        // Fechar o modal
+                        $('#addDominioModal').modal('hide');
+                        
+                        // Adicionar o novo domínio ao select atual
+                        if (dominioChoices) {
+                            // Adicionar à lista de Choices.js
+                            dominioChoices.setChoices([
+                                { value: novoDominio, label: novoDominio, selected: true }
+                            ], 'value', 'label', true);
+                            
+                            console.log('Novo domínio adicionado ao select:', novoDominio);
+                        } else {
+                            // Fallback para o select nativo
+                            $('#dominio').append(new Option(novoDominio, novoDominio, true, true));
+                            console.log('Novo domínio adicionado ao select nativo:', novoDominio);
+                        }
+                        
+                        // Atualizar a lista completa de domínios se o servidor retornou a lista atualizada
+                        if (response.dominios && response.dominios.length > 0) {
+                            console.log('Lista atualizada de domínios recebida do servidor:', response.dominios);
+                            
+                            if (dominioChoices) {
+                                // Pegar as opções atualmente selecionadas para mantê-las selecionadas
+                                var selecionados = dominioChoices.getValue().map(function(item) {
+                                    return item.value;
+                                });
+                                
+                                // Atualizar todas as opções
+                                dominioChoices.clearStore();
+                                
+                                // Adicionar cada opção da lista atualizada
+                                var novasEscolhas = response.dominios.map(function(dominio) {
+                                    return {
+                                        value: dominio,
+                                        label: dominio,
+                                        selected: selecionados.includes(dominio)
+                                    };
+                                });
+                                
+                                dominioChoices.setChoices(novasEscolhas, 'value', 'label', true);
+                                console.log('Lista de domínios atualizada no Choices.js');
+                            }
+                        }
+                        
+                        // Mostrar mensagem de sucesso
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            text: 'Domínio adicionado com sucesso',
+                            icon: 'success',
+                            timer: 1500,
+                            timerProgressBar: true,
+                            showConfirmButton: false
+                        });
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.error || 'Erro ao adicionar domínio',
+                            icon: 'error',
+                            confirmButtonColor: '#3085d6',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Extrair a mensagem de erro da resposta do servidor se disponível
+                    let mensagemErro = 'Ocorreu um erro ao adicionar o domínio';
+                    
+                    try {
+                        const resposta = JSON.parse(xhr.responseText);
+                        if (resposta && resposta.error) {
+                            mensagemErro = resposta.error;
+                        }
+                    } catch (e) {
+                        // Se não conseguir analisar a resposta, usar a mensagem padrão
+                        mensagemErro += ': ' + error;
+                    }
+                    
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: mensagemErro,
+                        icon: 'error',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                    console.error('Erro ao adicionar domínio:', error);
+                    console.error('Resposta do servidor:', xhr.responseText);
+                }
+            });
+        });
+        
+        // Permitir pressionar Enter no campo de texto para salvar
+        $('#novoDominio').keypress(function(e) {
+            if (e.which === 13) { // Enter key
+                $('#saveDominioBtn').click();
+            }
+        });
+    });
+</script>
+
+{% endblock %}

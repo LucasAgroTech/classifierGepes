@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block title %}Visualização de Categorias - gepesClassifier{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Header com breadcrumb e botão de voltar -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center">
+            <h2 class="page-title">
+                <i class="fas fa-layer-group me-2 text-primary"></i>Visualização de Categorias
+            </h2>
+        </div>
+        <a href="{{ url_for('main.projects') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Accordion principal com duas seções -->
+    <div class="accordion accordion-flush mb-4" id="mainAccordion">
+        <!-- Seção 1: Áreas de Aplicação -->
+        <div class="accordion-item mb-3 border-0 shadow-sm rounded">
+            <h2 class="accordion-header" id="headingAreas">
+                <button class="accordion-button rounded collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#collapseAreas" aria-expanded="false" 
+                        aria-controls="collapseAreas">
+                    <strong><i class="fas fa-th-large me-2"></i>Áreas de Aplicação</strong>
+                </button>
+            </h2>
+            <div id="collapseAreas" class="accordion-collapse collapse" 
+                 aria-labelledby="headingAreas" data-bs-parent="#mainAccordion">
+                <div class="accordion-body">
+                    <!-- Accordion aninhado para as macroáreas -->
+                    <div class="accordion" id="areasAccordion">
+                        {% for macroarea, categories in categories.items() %}
+                        <div class="accordion-item mb-3 border-0 shadow-sm rounded">
+                            <h2 class="accordion-header" id="headingArea{{ loop.index }}">
+                                <button class="accordion-button rounded collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseArea{{ loop.index }}" aria-expanded="false" 
+                                        aria-controls="collapseArea{{ loop.index }}">
+                                    <strong>{{ macroarea }}</strong>
+                                </button>
+                            </h2>
+                            <div id="collapseArea{{ loop.index }}" class="accordion-collapse collapse" 
+                                 aria-labelledby="headingArea{{ loop.index }}" data-bs-parent="#areasAccordion">
+                                <div class="accordion-body">
+                                    <div class="row g-4">
+                                        {% for category in categories %}
+                                        <div class="col-md-6 mb-3">
+                                            <div class="card h-100 border-0 shadow-sm">
+                                                <div class="card-header bg-white">
+                                                    <h5 class="mb-0 fw-bold">{{ category.Segmento }}</h5>
+                                                </div>
+                                                <div class="card-body">
+                                                    <h6 class="mb-2 text-primary fw-bold">Domínios Afeitos</h6>
+                                                    <div class="category-bubbles-container">
+                                                        {% for dominio in category['Domínios Afeitos'].split(';') %}
+                                                            {% set domain_text = dominio.strip() %}
+                                                            {% if domain_text %}
+                                                            <span class="category-bubble">{{ domain_text }}</span>
+                                                            {% endif %}
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção 2: Tecnologias Verdes -->
+        <div class="accordion-item mb-3 border-0 shadow-sm rounded">
+            <h2 class="accordion-header" id="headingTecVerde">
+                <button class="accordion-button rounded collapsed" type="button" data-bs-toggle="collapse" 
+                        data-bs-target="#collapseTecVerde" aria-expanded="false" 
+                        aria-controls="collapseTecVerde">
+                    <strong><i class="fas fa-leaf me-2"></i>Tecnologias Verdes</strong>
+                </button>
+            </h2>
+            <div id="collapseTecVerde" class="accordion-collapse collapse" 
+                 aria-labelledby="headingTecVerde" data-bs-parent="#mainAccordion">
+                <div class="accordion-body">
+                    <!-- Accordion aninhado para as classes de tecnologias verdes -->
+                    <div class="accordion" id="tecVerdeAccordion">
+                        {% for classe, descricao in tecverde_classes.items() %}
+                        <div class="accordion-item mb-3 border-0 shadow-sm rounded">
+                            <h2 class="accordion-header" id="headingTec{{ loop.index }}">
+                                <button class="accordion-button rounded collapsed" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#collapseTec{{ loop.index }}" aria-expanded="false" 
+                                        aria-controls="collapseTec{{ loop.index }}">
+                                    <strong>{{ classe }}</strong>
+                                </button>
+                            </h2>
+                            <div id="collapseTec{{ loop.index }}" class="accordion-collapse collapse" 
+                                 aria-labelledby="headingTec{{ loop.index }}" data-bs-parent="#tecVerdeAccordion">
+                                <div class="accordion-body">
+                                    <div class="card border-0 shadow-sm mb-3">
+                                        <div class="card-body">
+                                            <h6 class="mb-3 text-primary fw-bold">Descrição</h6>
+                                            <p>{{ descricao }}</p>
+                                            
+                                            <h6 class="mb-2 mt-4 text-primary fw-bold">Subclasses</h6>
+                                            <div class="category-bubbles-container">
+                                                {% for subclasse in tecverde_subclasses.get(classe, '').split(';') %}
+                                                    {% set subclass_text = subclasse.strip() %}
+                                                    {% if subclass_text %}
+                                                    <span class="category-bubble">{{ subclass_text }}</span>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos específicos para a página de visualização de categorias */
+    .accordion-button:not(.collapsed) {
+        background-color: var(--primary-bg-light);
+        color: var(--primary-color);
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: var(--primary-color);
+    }
+
+    .accordion-button::after {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2335BB9F' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E");
+    }
+    
+    /* Melhorias para os cards de categorias */
+    .card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1) !important;
+    }
+    
+    /* Estilo para as bolhas de categorias */
+    .category-bubble {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        margin: 0.3rem;
+        background-color: var(--primary-bg-light);
+        color: var(--primary-color);
+        border-radius: 1rem;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+    }
+    
+    .category-bubble:hover {
+        background-color: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    /* Estilo para containers de bolhas */
+    .category-bubbles-container {
+        display: flex;
+        flex-wrap: wrap;
+        margin: -0.3rem;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,16 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-WTF
+Flask-Login
+psycopg2-binary
+python-dotenv
+openai
+gunicorn
+Werkzeug
+Jinja2
+SQLAlchemy
+alembic
+Pillow
+pandas
+openpyxl

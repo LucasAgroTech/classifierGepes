@@ -1,0 +1,967 @@
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
+from flask_login import login_user, logout_user, login_required, current_user
+from app.models import Usuario, Projeto, Categoria, TecnologiaVerde, CategoriaLista, ClassificacaoAdicional, Log, AISuggestion, db
+from app.forms import LoginForm, CategorizacaoForm, SettingsForm
+from app.ai_integration import OpenAIClient
+from config import Config
+import json
+import os
+from datetime import datetime
+import logging
+
+main = Blueprint('main', __name__)
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Função para extrair nome do email
+def extract_name_from_email(email):
+    """
+    Extrai o nome do usuário a partir do email.
+    Exemplo: lucas.pinheiro@embrapii.org.br -> Lucas Pinheiro
+    """
+    try:
+        # Remove o domínio
+        username = email.split('@')[0]
+        # Substitui pontos por espaços
+        name_parts = username.replace('.', ' ').split()
+        # Capitaliza cada parte
+        capitalized_parts = [part.capitalize() for part in name_parts]
+        # Junta as partes
+        return ' '.join(capitalized_parts)
+    except:
+        return email  # Retorna o email original em caso de erro
+
+# Rota para a página inicial
+@main.route('/')
+def index():
+    return redirect(url_for('main.projects'))
+
+# Rota para login
+@main.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.projects'))
+    
+    form = LoginForm()
+    if form.validate_on_submit():
+        # Verificar se o usuário existe
+        usuario = Usuario.query.filter_by(email=form.email.data).first()
+        
+        if usuario and usuario.check_password(form.password.data):
+            login_user(usuario, remember=form.remember_me.data)
+            flash('Login realizado com sucesso!', 'success')
+            
+            # Redirecionar para a página requisitada antes do login (se houver)
+            next_page = request.args.get('next')
+            if not next_page or not next_page.startswith('/'):
+                next_page = url_for('main.projects')
+            return redirect(next_page)
+        else:
+            flash('Credenciais inválidas. Por favor, tente novamente.', 'error')
+    
+    return render_template('login.html', form=form)
+
+# Rota para logout
+@main.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Você saiu do sistema.', 'info')
+    return redirect(url_for('main.login'))
+
+# Rota para listagem de projetos
+@main.route('/projects')
+@login_required
+def projects():
+    try:
+        # Obter dados dos projetos
+        projects_data = Projeto.query.all()
+        
+        # Obter todas as sugestões da IA
+        ai_suggestions = AISuggestion.query.all()
+        ai_suggestions_dict = [suggestion.to_dict() for suggestion in ai_suggestions]
+        
+        # Verificar se cada projeto foi validado por humano com base nas avaliações
+        for project in projects_data:
+            # Verificar se o projeto tem alguma avaliação da IA feita por humano
+            project.human_validated = any(
+                rating.user_id != 'sistema.automatico@embrapii.org.br' 
+                for rating in project.ai_ratings
+            )
+            
+            # Verificar se o projeto tem sugestão da IA
+            project.ai_classified = any(suggestion.id_projeto == project.id for suggestion in ai_suggestions)
+            
+            # Verificar se o projeto já foi categorizado
+            project.categorizado = project.categoria is not None
+        
+        return render_template('projects.html', projects=projects_data, ai_suggestions=ai_suggestions_dict)
+        
+    except Exception as e:
+        flash(f'Erro ao carregar projetos: {str(e)}', 'error')
+        logger.error(f"Erro ao carregar projetos: {str(e)}")
+        return redirect(url_for('main.login'))
+
+# Função para registrar log de categorização
+def log_categorization(project_id, used_ai=False, validation_info=None, user_modified=False):
+    try:
+        # Buscar o projeto
+        projeto = Projeto.query.get(project_id)
+        if not projeto:
+            logger.error(f"Projeto não encontrado: {project_id}")
+            return False
+        
+        # Criar registro de log
+        log = Log(
+            id_projeto=project_id,
+            id_usuario=current_user.id if current_user.is_authenticated else None,
+            email_usuario=current_user.email if current_user.is_authenticated else 'sistema',
+            nome_usuario=current_user.nome if current_user.is_authenticated else 'Sistema',
+            acao='categorização',
+            descricao=json.dumps(validation_info) if validation_info else None,
+            utilizou_ia=used_ai,
+            usuario_modificou=user_modified
+        )
+        
+        # Se há avaliações da IA para este projeto e usuário, registrar
+        from app.routes_ai_ratings import get_ai_rating
+        
+        user_id = current_user.email if current_user.is_authenticated else 'sistema'
+        
+        # Carregar avaliação para Área de Interesse de Aplicação
+        aia_rating = get_ai_rating(project_id, user_id, 'aia')
+        if aia_rating:
+            log.ai_rating_aia = aia_rating.rating
+        
+        # Carregar avaliação para Tecnologias Verdes
+        tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
+        if tecverde_rating:
+            log.ai_rating_tecverde = tecverde_rating.rating
+        
+        db.session.add(log)
+        db.session.commit()
+        
+        logger.info(f"Log de categorização registrado para projeto {project_id}")
+        return True
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao registrar log de categorização: {str(e)}")
+        return False
+
+# Função para obter logs de um projeto específico
+def get_project_logs(project_id):
+    """
+    Obtém os logs de categorização para um projeto específico.
+    """
+    try:
+        project_logs = Log.query.filter_by(id_projeto=project_id).order_by(Log.data_acao.desc()).all()
+        
+        for log in project_logs:
+            if not log.nome_usuario and log.email_usuario:
+                log.nome_usuario = extract_name_from_email(log.email_usuario)
+        
+        return project_logs
+    except Exception as e:
+        logger.error(f"Erro ao obter logs do projeto: {str(e)}")
+        return []
+
+# Rota para categorização de um projeto
+@main.route('/categorize/<int:project_id>', methods=['GET', 'POST'])
+@login_required
+def categorize(project_id):
+    try:
+        # Buscar o projeto
+        project = Projeto.query.get_or_404(project_id)
+        
+        if request.method == 'POST':
+            # Processar o formulário de categorização
+            form_data = request.form
+            
+            # Processar dados de categorização
+            microarea = form_data.get('microarea')
+            segmento = form_data.get('segmento')
+            dominio_values = request.form.getlist('dominio')
+            dominio_str = ';'.join(dominio_values) if dominio_values else None
+            dominio_outros_values = request.form.getlist('dominio_outros')
+            dominio_outros_str = ';'.join(dominio_outros_values) if dominio_outros_values else None
+            observacoes = form_data.get('observacoes')
+            
+            # Processar dados de tecnologia verde
+            tecverde_se_aplica = form_data.get('tecverde_se_aplica')
+            tecverde_classe = form_data.get('tecverde_classe')
+            tecverde_subclasse = form_data.get('tecverde_subclasse')
+            tecverde_observacoes = form_data.get('tecverde_observacoes')
+            
+            # Verificar se utilizou IA e se o usuário modificou os campos
+            used_ai = form_data.get('used_ai') == 'true'
+            user_modified = form_data.get('user_modified') == 'true'
+            
+            # Processar classificações adicionais
+            additional_classifications_json = form_data.get('additional_classifications')
+            additional_classifications = []
+            if additional_classifications_json:
+                try:
+                    additional_classifications = json.loads(additional_classifications_json)
+                except json.JSONDecodeError:
+                    logger.error("Erro ao decodificar classificações adicionais")
+            
+            # Atualizar dados do projeto
+            project._aia_n1_macroarea = microarea
+            project._aia_n2_segmento = segmento
+            project._aia_n3_dominio_afeito = dominio_str
+            project._aia_n3_dominio_outro = dominio_outros_str
+            project.tecverde_se_aplica = tecverde_se_aplica == '1'
+            project.tecverde_classe = tecverde_classe if tecverde_se_aplica == '1' else ''
+            project.tecverde_subclasse = tecverde_subclasse if tecverde_se_aplica == '1' else ''
+            project.tecverde_observacoes = tecverde_observacoes
+            
+            # Verificar/criar registro de Categoria
+            categoria = Categoria.query.filter_by(id_projeto=project.id).first()
+            if not categoria:
+                categoria = Categoria(id_projeto=project.id)
+                db.session.add(categoria)
+            
+            # Atualizar categoria
+            categoria.microarea = microarea
+            categoria.segmento = segmento
+            categoria.dominio = dominio_str
+            categoria.dominio_outros = dominio_outros_str
+            categoria.observacoes = observacoes
+            
+            # Verificar/criar registro de TecnologiaVerde
+            tecverde = TecnologiaVerde.query.filter_by(id_projeto=project.id).first()
+            if not tecverde:
+                tecverde = TecnologiaVerde(id_projeto=project.id)
+                db.session.add(tecverde)
+            
+            # Atualizar tecnologia verde
+            tecverde.se_aplica = tecverde_se_aplica == '1'
+            tecverde.classe = tecverde_classe if tecverde_se_aplica == '1' else ''
+            tecverde.subclasse = tecverde_subclasse if tecverde_se_aplica == '1' else ''
+            tecverde.observacoes = tecverde_observacoes
+            
+            # Limpar classificações adicionais existentes
+            ClassificacaoAdicional.query.filter_by(id_projeto=project.id).delete()
+            
+            # Adicionar novas classificações adicionais
+            for i, classification in enumerate(additional_classifications):
+                if classification.get('microarea') and classification.get('segmento'):
+                    ordem = i + 1
+                    adicional = ClassificacaoAdicional(
+                        id_projeto=project.id,
+                        microarea=classification['microarea'],
+                        segmento=classification['segmento'],
+                        ordem=ordem
+                    )
+                    db.session.add(adicional)
+            
+            # Salvar mudanças
+            db.session.commit()
+            
+            # Registrar log
+            log_categorization(project.id, used_ai, None, user_modified)
+            
+            flash('Categorização salva com sucesso!', 'success')
+            return redirect(url_for('main.projects'))
+        
+        # Para requisição GET, mostrar formulário de categorização
+        form = CategorizacaoForm()
+        
+        # Obter listas de categorias
+        categories_lists = self._get_categories_lists()
+        
+        # Obter categorização existente
+        existing = {
+            'microarea': project._aia_n1_macroarea,
+            'segmento': project._aia_n2_segmento,
+            'dominio': project._aia_n3_dominio_afeito,
+            'dominio_outros': project._aia_n3_dominio_outro,
+            'tecverde_se_aplica': '1' if project.tecverde_se_aplica else '0',
+            'tecverde_classe': project.tecverde_classe,
+            'tecverde_subclasse': project.tecverde_subclasse,
+            'tecverde_observacoes': project.tecverde_observacoes
+        }
+        
+        # Buscar categoria para obter observações
+        categoria = Categoria.query.filter_by(id_projeto=project.id).first()
+        if categoria:
+            existing['observacoes'] = categoria.observacoes
+        
+        # Buscar classificações adicionais
+        classificacoes_adicionais = ClassificacaoAdicional.query.filter_by(id_projeto=project.id).order_by(ClassificacaoAdicional.ordem).all()
+        if classificacoes_adicionais:
+            existing['additional_classifications'] = [
+                {'microarea': ca.microarea, 'segmento': ca.segmento}
+                for ca in classificacoes_adicionais
+            ]
+        
+        # Verificar se já existe uma sugestão da IA para este projeto
+        ai_suggestion = AISuggestion.query.filter_by(id_projeto=project.id).first()
+        if ai_suggestion:
+            ai_suggestion = ai_suggestion.to_dict()
+        
+        # Se não existe sugestão e o openai_api_key está configurado, gerar sugestão
+        if not ai_suggestion:
+            openai_api_key = Config.get_openai_api_key()
+            if openai_api_key:
+                try:
+                    # Obter dados de aia.json (simulado para este exemplo)
+                    aia_data = self._get_aia_data()
+                    
+                    # Chamar OpenAI para sugerir categorias
+                    openai_client = OpenAIClient(openai_api_key)
+                    ai_suggestion = openai_client.suggest_categories(project.__dict__, None, aia_data)
+                    
+                    # Adicionar ID do projeto
+                    ai_suggestion['project_id'] = project.id
+                    
+                    # A função suggest_categories já deve ter salvo a sugestão no banco
+                    # Mas verificamos aqui como garantia
+                    if not AISuggestion.query.filter_by(id_projeto=project.id).first():
+                        suggestion = AISuggestion(
+                            id_projeto=project.id,
+                            _aia_n1_macroarea=ai_suggestion.get('_aia_n1_macroarea', ''),
+                            _aia_n2_segmento=ai_suggestion.get('_aia_n2_segmento', ''),
+                            _aia_n3_dominio_afeito=ai_suggestion.get('_aia_n3_dominio_afeito', ''),
+                            _aia_n3_dominio_outro=ai_suggestion.get('_aia_n3_dominio_outro', ''),
+                            confianca=ai_suggestion.get('confianca', ''),
+                            justificativa=ai_suggestion.get('justificativa', ''),
+                            tecverde_se_aplica=ai_suggestion.get('tecverde_se_aplica', False),
+                            tecverde_classe=ai_suggestion.get('tecverde_classe', ''),
+                            tecverde_subclasse=ai_suggestion.get('tecverde_subclasse', ''),
+                            tecverde_confianca=ai_suggestion.get('tecverde_confianca', ''),
+                            tecverde_justificativa=ai_suggestion.get('tecverde_justificativa', ''),
+                            timestamp=datetime.now()
+                        )
+                        db.session.add(suggestion)
+                        db.session.commit()
+                except Exception as e:
+                    logger.error(f"Erro ao obter sugestão da IA: {str(e)}")
+        
+        # Obter dados para tecnologias verdes
+        tecverde_classes = self._get_tecverde_classes()
+        tecverde_subclasses = self._get_tecverde_subclasses()
+        
+        # Obter avaliações da IA
+        ai_ratings = self._get_ai_ratings(project.id)
+        
+        # Obter logs do projeto
+        project_logs = get_project_logs(project.id)
+        
+        return render_template(
+            'categorize.html',
+            project=project,
+            form=form,
+            categories_lists=categories_lists,
+            existing=existing,
+            ai_suggestion=ai_suggestion,
+            openai_enabled=bool(Config.get_openai_api_key()),
+            project_logs=project_logs,
+            tecverde_classes=tecverde_classes,
+            tecverde_subclasses=tecverde_subclasses,
+            ai_ratings=ai_ratings
+        )
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro: {str(e)}', 'error')
+        logger.error(f"Erro na categorização: {str(e)}")
+        return redirect(url_for('main.projects'))
+
+    # Métodos auxiliares para obter dados
+    def _get_categories_lists(self):
+        """Obtém as listas de categorias do banco de dados."""
+        organized_lists = {}
+        
+        for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
+            items = CategoriaLista.query.filter_by(tipo=tipo, ativo=True).all()
+            organized_lists[tipo] = [item.valor for item in items if item.valor]
+        
+        # Obter dados de domínios por microárea e segmento
+        # Simulando para este exemplo
+        organized_lists['dominios_por_microarea_segmento_json'] = json.dumps({
+            "Tecnologia da Informação": {
+                "Inteligência Artificial": ["Machine Learning", "Visão Computacional", "NLP"],
+                "Infraestrutura": ["Cloud Computing", "Edge Computing", "IoT"]
+            },
+            "Energia": {
+                "Renovável": ["Solar", "Eólica", "Biomassa"],
+                "Eficiência Energética": ["Smart Grid", "Armazenamento", "Gestão de Energia"]
+            }
+        })
+        
+        return organized_lists
+
+    def _get_aia_data(self):
+        """Simula a obtenção dos dados de AIA (que seria carregado de um arquivo)."""
+        return [
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Inteligência Artificial",
+                "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
+            },
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Infraestrutura",
+                "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Renovável",
+                "Domínios Afeitos": "Solar; Eólica; Biomassa"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Eficiência Energética",
+                "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
+            }
+        ]
+
+    def _get_tecverde_classes(self):
+        """Simula a obtenção das classes de tecnologias verdes."""
+        return {
+            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+            "Conservação": "Tecnologias para conservação de recursos naturais",
+            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+        }
+
+    def _get_tecverde_subclasses(self):
+        """Simula a obtenção das subclasses de tecnologias verdes."""
+        return {
+            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+        }
+
+    def _get_ai_ratings(self, project_id):
+        """Obtém as avaliações da IA para um projeto."""
+        from app.routes_ai_ratings import get_ai_rating
+        
+        # Obter avaliações para este projeto e usuário
+        user_id = current_user.email if current_user.is_authenticated else None
+        
+        if not user_id:
+            return None
+        
+        # Carregar avaliações
+        aia_rating = get_ai_rating(project_id, user_id, 'aia')
+        tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
+        
+        return {
+            'aia': aia_rating.to_dict() if aia_rating else {'rating': 0, 'observacoes': ''},
+            'tecverde': tecverde_rating.to_dict() if tecverde_rating else {'rating': 0, 'observacoes': ''}
+        }
+
+# Rota para salvar tecnologias verdes
+@main.route('/save_tecverde/<int:project_id>', methods=['POST'])
+@login_required
+def save_tecverde(project_id):
+    try:
+        # Obter os dados enviados via JSON
+        data = request.json
+        
+        if not data:
+            return jsonify({'error': 'Dados não fornecidos'}), 400
+        
+        # Buscar o projeto
+        project = Projeto.query.get_or_404(project_id)
+        
+        # Normalizar valor de tecverde_se_aplica para booleano
+        tecverde_se_aplica_str = data.get('tecverde_se_aplica', '')
+        tecverde_se_aplica = tecverde_se_aplica_str == '1' or tecverde_se_aplica_str.lower() == 'sim'
+        
+        # Atualizar dados do projeto
+        project.tecverde_se_aplica = tecverde_se_aplica
+        project.tecverde_classe = data.get('tecverde_classe', '') if tecverde_se_aplica else ''
+        project.tecverde_subclasse = data.get('tecverde_subclasse', '') if tecverde_se_aplica else ''
+        project.tecverde_observacoes = data.get('tecverde_observacoes', '')
+        
+        # Verificar se existe registro de TecnologiaVerde
+        tecverde = TecnologiaVerde.query.filter_by(id_projeto=project.id).first()
+        if not tecverde:
+            tecverde = TecnologiaVerde(id_projeto=project.id)
+            db.session.add(tecverde)
+        
+        # Atualizar dados de TecnologiaVerde
+        tecverde.se_aplica = tecverde_se_aplica
+        tecverde.classe = data.get('tecverde_classe', '') if tecverde_se_aplica else ''
+        tecverde.subclasse = data.get('tecverde_subclasse', '') if tecverde_se_aplica else ''
+        tecverde.observacoes = data.get('tecverde_observacoes', '')
+        
+        # Salvar mudanças
+        db.session.commit()
+        
+        # Registrar log
+        log_categorization(project.id, False, None, True)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Tecnologias verdes salvas com sucesso'
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao salvar tecnologias verdes: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Rota para sugestão automática de categorias
+@main.route('/api/suggest-categories', methods=['POST'])
+@login_required
+def suggest_categories():
+    try:
+        data = request.json
+        project_id = data.get('project_id')
+        
+        if not project_id:
+            return jsonify({'error': 'ID do projeto não fornecido'}), 400
+        
+        # Obter chave da API do OpenAI
+        openai_api_key = Config.get_openai_api_key()
+        
+        if not openai_api_key:
+            return jsonify({'error': 'Chave da API OpenAI não configurada'}), 400
+        
+        # Buscar o projeto
+        project = Projeto.query.get_or_404(project_id)
+        
+        # Obter dados de aia.json (simulado)
+        aia_data = [
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Inteligência Artificial",
+                "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
+            },
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Infraestrutura",
+                "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Renovável",
+                "Domínios Afeitos": "Solar; Eólica; Biomassa"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Eficiência Energética",
+                "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
+            }
+        ]
+        
+        # Chamar OpenAI para sugerir categorias
+        openai_client = OpenAIClient(openai_api_key)
+        suggestions = openai_client.suggest_categories(project.__dict__, None, aia_data)
+        
+        # Armazenar a sugestão na sessão para uso posterior
+        session['ai_suggestion'] = suggestions
+        
+        return jsonify(suggestions)
+        
+    except Exception as e:
+        logger.error(f"Erro ao sugerir categorias: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Rota para validação de sugestões da IA
+@main.route('/api/validate-suggestion', methods=['POST'])
+@login_required
+def validate_suggestion():
+    try:
+        data = request.json
+        project_id = data.get('project_id')
+        validation = data.get('validation', {})
+        
+        # Adicionar campos manuais ao objeto de validação
+        for field in ['microarea', 'segmento', 'dominio']:
+            manual_field = f'manual_{field}'
+            if manual_field in data:
+                validation[manual_field] = data.get(manual_field)
+        
+        # Tratar especificamente o campo dominio_outros/dominio_outro
+        if 'manual_dominio_outros' in data:
+            validation['manual_dominio_outros'] = data.get('manual_dominio_outros')
+            validation['manual_dominio_outro'] = data.get('manual_dominio_outros')
+        
+        if not project_id:
+            return jsonify({'error': 'ID do projeto não fornecido'}), 400
+        
+        # Obter a sugestão da IA da sessão
+        suggestion = session.get('ai_suggestion')
+        
+        if not suggestion:
+            return jsonify({'error': 'Nenhuma sugestão da IA encontrada na sessão'}), 400
+        
+        # Obter chave da API do OpenAI para processar a validação
+        openai_api_key = Config.get_openai_api_key()
+        
+        if not openai_api_key:
+            return jsonify({'error': 'Chave da API OpenAI não configurada'}), 400
+        
+        # Processar a validação
+        openai_client = OpenAIClient(openai_api_key)
+        result = openai_client.process_validation(suggestion, validation)
+        
+        # Buscar o projeto
+        project = Projeto.query.get_or_404(project_id)
+        
+        # Atualizar o projeto com os resultados
+        project._aia_n1_macroarea = result.get('_aia_n1_macroarea', '')
+        project._aia_n2_segmento = result.get('_aia_n2_segmento', '')
+        project._aia_n3_dominio_afeito = result.get('_aia_n3_dominio_afeito', '')
+        project._aia_n3_dominio_outro = result.get('_aia_n3_dominio_outro', '')
+        
+        # Verificar/criar registro de Categoria
+        categoria = Categoria.query.filter_by(id_projeto=project.id).first()
+        if not categoria:
+            categoria = Categoria(id_projeto=project.id)
+            db.session.add(categoria)
+        
+        # Atualizar categoria
+        categoria.microarea = result.get('_aia_n1_macroarea', '')
+        categoria.segmento = result.get('_aia_n2_segmento', '')
+        categoria.dominio = result.get('_aia_n3_dominio_afeito', '')
+        categoria.dominio_outros = result.get('_aia_n3_dominio_outro', '')
+        
+        # Salvar mudanças
+        db.session.commit()
+        
+        # Registrar log da categorização
+        # Neste caso, consideramos que o usuário modificou os campos se houver campos manuais no objeto de validação
+        user_modified = any(key.startswith('manual_') for key in validation.keys())
+        log_categorization(project.id, True, validation, user_modified)
+        
+        return jsonify({'success': True, 'message': 'Validação processada com sucesso'})
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao validar sugestão: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Rota para adicionar novo domínio
+@main.route('/add_dominio', methods=['POST'])
+@login_required
+def add_dominio():
+    try:
+        data = request.get_json()
+        
+        if not data or 'microarea' not in data or 'segmento' not in data or 'dominio' not in data:
+            return jsonify({'success': False, 'error': 'Dados incompletos. É necessário fornecer macroárea, segmento e domínio.'}), 400
+            
+        microarea = data['microarea']
+        segmento = data['segmento']
+        novo_dominio = data['dominio']
+        
+        # Verificar se o domínio já existe
+        existente = CategoriaLista.query.filter_by(
+            tipo='dominio', 
+            valor=novo_dominio
+        ).first()
+        
+        if existente:
+            return jsonify({'success': False, 'error': 'Este domínio já existe.'}), 400
+        
+        # Adicionar novo domínio à lista
+        dominio = CategoriaLista(
+            tipo='dominio',
+            valor=novo_dominio,
+            ativo=True
+        )
+        db.session.add(dominio)
+        db.session.commit()
+        
+        # Buscar domínios atualizados
+        dominios = CategoriaLista.query.filter_by(tipo='dominio', ativo=True).all()
+        dominios_list = [d.valor for d in dominios]
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Domínio adicionado com sucesso.',
+            'dominios': dominios_list
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao adicionar domínio: {str(e)}")
+        return jsonify({'success': False, 'error': f'Erro ao adicionar domínio: {str(e)}'}), 500
+
+# Rota para salvar uma classificação adicional individualmente
+@main.route('/save_additional_classification/<int:project_id>', methods=['POST'])
+@login_required
+def save_additional_classification(project_id):
+    try:
+        data = request.json
+        
+        if not data:
+            return jsonify({'error': 'Dados não fornecidos'}), 400
+        
+        # Verificar se os campos necessários estão presentes
+        required_fields = ['microarea', 'segmento']
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Campo obrigatório ausente: {field}'}), 400
+        
+        # Verificar se o projeto existe
+        project = Projeto.query.get_or_404(project_id)
+        
+        # Verificar quantas classificações adicionais já existem
+        count = ClassificacaoAdicional.query.filter_by(id_projeto=project_id).count()
+        if count >= 3:
+            return jsonify({'error': 'Limite máximo de 3 classificações adicionais atingido'}), 400
+        
+        # Verificar se a classificação já existe
+        existente = ClassificacaoAdicional.query.filter_by(
+            id_projeto=project_id,
+            microarea=data['microarea'],
+            segmento=data['segmento']
+        ).first()
+        
+        if existente:
+            return jsonify({'error': 'Esta classificação adicional já existe'}), 400
+        
+        # Criar a nova classificação adicional
+        classificacao = ClassificacaoAdicional(
+            id_projeto=project_id,
+            microarea=data['microarea'],
+            segmento=data['segmento'],
+            ordem=count + 1
+        )
+        db.session.add(classificacao)
+        db.session.commit()
+        
+        # Registrar log
+        log_categorization(project_id, False, None, True)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'Classificação adicional salva com sucesso',
+            'classification': {
+                'microarea': data['microarea'],
+                'segmento': data['segmento']
+            }
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao salvar classificação adicional: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Rota para remover uma classificação adicional
+@main.route('/remove_additional_classification/<int:project_id>', methods=['POST'])
+@login_required
+def remove_additional_classification(project_id):
+    try:
+        data = request.json
+        
+        if not data or 'index' not in data:
+            return jsonify({'error': 'Dados incompletos'}), 400
+        
+        # Converter index para inteiro
+        try:
+            index = int(data['index'])
+        except ValueError:
+            return jsonify({'error': 'Índice inválido'}), 400
+        
+        # Buscar a classificação pelo índice (ordem)
+        classificacao = ClassificacaoAdicional.query.filter_by(
+            id_projeto=project_id,
+            ordem=index
+        ).first()
+        
+        if not classificacao:
+            return jsonify({'error': 'Classificação não encontrada'}), 404
+        
+        # Guardar dados para retornar ao cliente
+        removed = {
+            'microarea': classificacao.microarea,
+            'segmento': classificacao.segmento
+        }
+        
+        # Remover a classificação
+        db.session.delete(classificacao)
+        
+        # Reordenar as classificações restantes
+        classificacoes = ClassificacaoAdicional.query.filter_by(
+            id_projeto=project_id
+        ).order_by(ClassificacaoAdicional.ordem).all()
+        
+        for i, c in enumerate(classificacoes, 1):
+            c.ordem = i
+        
+        db.session.commit()
+        
+        # Registrar log
+        log_categorization(project_id, False, None, True)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Classificação adicional removida com sucesso',
+            'removed_classification': removed
+        })
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Erro ao remover classificação adicional: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Rota para configurações
+@main.route('/settings', methods=['GET', 'POST'])
+@login_required
+def settings():
+    form = SettingsForm()
+    
+    if form.validate_on_submit():
+        openai_api_key = form.openai_api_key.data
+        
+        # Salvar chave da API
+        if Config.save_openai_api_key(openai_api_key):
+            flash('Configurações salvas com sucesso!', 'success')
+        else:
+            flash('Erro ao salvar configurações', 'error')
+        
+        return redirect(url_for('main.settings'))
+    
+    # Para GET, preencher o formulário com a chave atual
+    form.openai_api_key.data = Config.get_openai_api_key()
+    
+    return render_template('settings.html', form=form)
+
+# Rota para visualização de logs
+@main.route('/logs')
+@login_required
+def view_logs():
+    try:
+        # Buscar logs
+        logs = Log.query.order_by(Log.data_acao.desc()).all()
+        
+        # Para cada log, adicionar o nome do projeto
+        for log in logs:
+            log.projeto_titulo = log.projeto.titulo if log.projeto else f"Projeto {log.id_projeto}"
+            
+            # Formatar nome do usuário se necessário
+            if not log.nome_usuario and log.email_usuario:
+                log.nome_usuario = extract_name_from_email(log.email_usuario)
+        
+        return render_template('logs.html', logs=logs)
+        
+    except Exception as e:
+        flash(f'Erro ao carregar logs: {str(e)}', 'error')
+        logger.error(f"Erro ao carregar logs: {str(e)}")
+        return redirect(url_for('main.projects'))
+
+# Rota para visualização de categorias
+@main.route('/categories')
+@login_required
+def view_categories():
+    try:
+        # Aqui simularemos os dados do aia.json
+        categories_data = [
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Inteligência Artificial",
+                "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
+            },
+            {
+                "Macroárea": "Tecnologia da Informação",
+                "Segmento": "Infraestrutura",
+                "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Renovável",
+                "Domínios Afeitos": "Solar; Eólica; Biomassa"
+            },
+            {
+                "Macroárea": "Energia",
+                "Segmento": "Eficiência Energética",
+                "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
+            }
+        ]
+        
+        # Organizar os dados por macroárea
+        organized_categories = {}
+        for category in categories_data:
+            macroarea = category.get('Macroárea')
+            if macroarea not in organized_categories:
+                organized_categories[macroarea] = []
+            organized_categories[macroarea].append(category)
+        
+        # Obter dados de tecnologias verdes
+        tecverde_classes = {
+            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+            "Conservação": "Tecnologias para conservação de recursos naturais",
+            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+        }
+        
+        tecverde_subclasses = {
+            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+        }
+        
+        return render_template('categories.html', 
+                              categories=organized_categories,
+                              tecverde_classes=tecverde_classes,
+                              tecverde_subclasses=tecverde_subclasses)
+        
+    except Exception as e:
+        flash(f'Erro ao carregar categorias: {str(e)}', 'error')
+        logger.error(f"Erro ao carregar categorias: {str(e)}")
+        return redirect(url_for('main.projects'))
+
+# Rota para gerenciar listas de categorias
+@main.route('/lists', methods=['GET', 'POST'])
+@login_required
+def lists():
+    try:
+        if request.method == 'POST':
+            # Processar o formulário de atualização de listas
+            lists_data = {}
+            
+            for column in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
+                values = request.form.getlist(f'{column}[]')
+                # Filtrar valores vazios
+                values = [v for v in values if v.strip()]
+                lists_data[column] = values
+                
+                # Atualizar no banco de dados
+                # Primeiro, marcar todos como inativos
+                CategoriaLista.query.filter_by(tipo=column).update({CategoriaLista.ativo: False})
+                
+                # Depois, atualizar ou criar cada item
+                for value in values:
+                    lista = CategoriaLista.query.filter_by(tipo=column, valor=value).first()
+                    if lista:
+                        lista.ativo = True
+                    else:
+                        nova_lista = CategoriaLista(tipo=column, valor=value, ativo=True)
+                        db.session.add(nova_lista)
+            
+            db.session.commit()
+            flash('Listas atualizadas com sucesso!', 'success')
+            return redirect(url_for('main.lists'))
+        
+        # Para GET, obter listas de categorias
+        organized_lists = {}
+        for column in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
+            items = CategoriaLista.query.filter_by(tipo=column, ativo=True).all()
+            organized_lists[column] = [item.valor for item in items]
+        
+        return render_template('lists.html', categories_lists=organized_lists)
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro: {str(e)}', 'error')
+        logger.error(f"Erro nas listas: {str(e)}")
+        return redirect(url_for('main.projects'))
