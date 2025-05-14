@@ -16,7 +16,7 @@ def get_ai_rating(project_id, user_id, tipo):
     Obtém a avaliação da IA para um projeto e usuário específicos.
     
     Args:
-        project_id: ID do projeto
+        project_id: ID ou código do projeto
         user_id: ID do usuário (email)
         tipo: Tipo da avaliação ('aia' ou 'tecverde')
         
@@ -24,6 +24,14 @@ def get_ai_rating(project_id, user_id, tipo):
         Objeto AIRating ou None se não encontrado
     """
     try:
+        # Verificar se project_id é um inteiro (ID interno) ou uma string (código do projeto)
+        if isinstance(project_id, str) and not project_id.isdigit():
+            # É um código de projeto, precisamos obter o ID interno
+            projeto = Projeto.query.filter_by(codigo_projeto=project_id).first()
+            if not projeto:
+                return None
+            project_id = projeto.id
+        
         rating = AIRating.query.filter_by(
             id_projeto=project_id,
             user_id=user_id,
@@ -69,14 +77,15 @@ def save_rating():
             return jsonify({'error': 'Avaliação deve ser um número entre 1 e 5'}), 400
         
         # Verificar se o projeto existe
-        projeto = Projeto.query.get(project_id)
+        # Buscar o projeto pelo código do projeto (string) em vez do ID (inteiro)
+        projeto = Projeto.query.filter_by(codigo_projeto=project_id).first()
         if not projeto:
             return jsonify({'error': 'Projeto não encontrado'}), 404
         
         # Verificar se já existe uma avaliação para este projeto, usuário e tipo
         user_id = current_user.email
         rating = AIRating.query.filter_by(
-            id_projeto=project_id,
+            id_projeto=projeto.id,
             user_id=user_id,
             tipo=tipo
         ).first()
@@ -101,7 +110,7 @@ def save_rating():
         else:
             # Criar nova avaliação
             rating = AIRating(
-                id_projeto=project_id,
+                id_projeto=projeto.id,
                 id_usuario=current_user.id if current_user.is_authenticated else None,
                 user_id=user_id,
                 nome_usuario=current_user.nome if current_user.is_authenticated else 'Usuário',
@@ -139,7 +148,7 @@ def save_rating():
         return jsonify({'error': str(e)}), 500
 
 # Rota para obter avaliação
-@ai_ratings_bp.route('/get/<int:project_id>/<string:tipo>', methods=['GET'])
+@ai_ratings_bp.route('/get/<project_id>/<string:tipo>', methods=['GET'])
 @login_required
 def get_rating(project_id, tipo):
     try:

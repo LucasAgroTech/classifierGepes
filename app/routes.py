@@ -186,9 +186,22 @@ def _get_ai_ratings(project_id):
     if not user_id:
         return None
     
+    # Verificar se project_id é um objeto Projeto ou um ID
+    if isinstance(project_id, int) or (isinstance(project_id, str) and project_id.isdigit()):
+        # É um ID numérico, usar diretamente
+        project_code = project_id
+    else:
+        # Pode ser um objeto Projeto ou um código de projeto
+        if hasattr(project_id, 'codigo_projeto'):
+            # É um objeto Projeto
+            project_code = project_id.codigo_projeto
+        else:
+            # Assumir que é um código de projeto
+            project_code = project_id
+    
     # Carregar avaliações
-    aia_rating = get_ai_rating(project_id, user_id, 'aia')
-    tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
+    aia_rating = get_ai_rating(project_code, user_id, 'aia')
+    tecverde_rating = get_ai_rating(project_code, user_id, 'tecverde')
     
     return {
         'aia': aia_rating.to_dict() if aia_rating else {'rating': 0, 'observacoes': ''},
@@ -365,13 +378,18 @@ def log_categorization(project_id, used_ai=False, validation_info=None, user_mod
         
         user_id = current_user.email if current_user.is_authenticated else 'sistema'
         
+        # Verificar se project_id é um objeto Projeto ou um ID
+        project_code = project_id
+        if hasattr(projeto, 'codigo_projeto'):
+            project_code = projeto.codigo_projeto
+        
         # Carregar avaliação para Área de Interesse de Aplicação
-        aia_rating = get_ai_rating(project_id, user_id, 'aia')
+        aia_rating = get_ai_rating(project_code, user_id, 'aia')
         if aia_rating:
             log.ai_rating_aia = aia_rating.rating
         
         # Carregar avaliação para Tecnologias Verdes
-        tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
+        tecverde_rating = get_ai_rating(project_code, user_id, 'tecverde')
         if tecverde_rating:
             log.ai_rating_tecverde = tecverde_rating.rating
         
@@ -542,12 +560,12 @@ def categorize(project_id):
             openai_api_key = Config.get_openai_api_key()
             if openai_api_key:
                 try:
-                    # Obter dados de aia.json (simulado para este exemplo)
-                    aia_data = _get_aia_data()
-                    
-                    # Chamar OpenAI para sugerir categorias
+                    # Criar cliente OpenAI
                     openai_client = OpenAIClient(openai_api_key)
-                    ai_suggestion = openai_client.suggest_categories(project.__dict__, None, aia_data)
+                    
+                    # Obter dados de categorias do banco de dados
+                    # O método suggest_categories irá chamar _get_aia_data_from_db internamente
+                    ai_suggestion = openai_client.suggest_categories(project.__dict__)
                     
                     # Adicionar ID do projeto
                     ai_suggestion['project_id'] = project.id
@@ -570,6 +588,10 @@ def categorize(project_id):
                             tecverde_justificativa=ai_suggestion.get('tecverde_justificativa', ''),
                             timestamp=datetime.now()
                         )
+                        
+                        # Log para depuração do valor de tecverde_se_aplica
+                        logger.info(f"Valor de tecverde_se_aplica recebido da IA: {ai_suggestion.get('tecverde_se_aplica')}, tipo: {type(ai_suggestion.get('tecverde_se_aplica'))}")
+                        logger.info(f"Valor de tecverde_se_aplica armazenado: {suggestion.tecverde_se_aplica}, tipo: {type(suggestion.tecverde_se_aplica)}")
                         db.session.add(suggestion)
                         db.session.commit()
                 except Exception as e:
@@ -680,33 +702,12 @@ def suggest_categories():
         # Buscar o projeto
         project = Projeto.query.get_or_404(project_id)
         
-        # Obter dados de aia.json (simulado)
-        aia_data = [
-            {
-                "Macroárea": "Tecnologia da Informação",
-                "Segmento": "Inteligência Artificial",
-                "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
-            },
-            {
-                "Macroárea": "Tecnologia da Informação",
-                "Segmento": "Infraestrutura",
-                "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
-            },
-            {
-                "Macroárea": "Energia",
-                "Segmento": "Renovável",
-                "Domínios Afeitos": "Solar; Eólica; Biomassa"
-            },
-            {
-                "Macroárea": "Energia",
-                "Segmento": "Eficiência Energética",
-                "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
-            }
-        ]
-        
-        # Chamar OpenAI para sugerir categorias
+        # Criar cliente OpenAI
         openai_client = OpenAIClient(openai_api_key)
-        suggestions = openai_client.suggest_categories(project.__dict__, None, aia_data)
+        
+        # Obter sugestões de categorias
+        # O método suggest_categories irá obter as categorias do banco de dados
+        suggestions = openai_client.suggest_categories(project.__dict__)
         
         # Armazenar a sugestão na sessão para uso posterior
         session['ai_suggestion'] = suggestions

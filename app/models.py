@@ -206,6 +206,16 @@ class Log(db.Model):
     ai_rating_aia = db.Column(db.Integer)
     ai_rating_tecverde = db.Column(db.Integer)
     
+    @property
+    def data(self):
+        """
+        Propriedade para compatibilidade com código que acessa log.data.
+        Retorna o valor de data_acao como string formatada.
+        """
+        if self.data_acao:
+            return self.data_acao.strftime('%Y-%m-%d %H:%M:%S')
+        return None
+    
     def __repr__(self):
         return f'<Log {self.id} para projeto {self.id_projeto}>'
 

@@ -2588,12 +2588,25 @@
 
 <!-- Script para salvar todos os formulários -->
 <script src="{{ url_for('static', filename='js/save_all.js') }}"></script>
+
+<!-- Script de debug para o campo tecverde_se_aplica -->
+<script src="{{ url_for('static', filename='js/debug_tecverde.js') }}"></script>
 <script>
     $(document).ready(function() {
         // Inicializar o botão de salvar tudo
         $('#saveAllFormsBtn').click(function() {
             saveAllForms();
         });
+        
+        // Aplicar automaticamente a correção para os campos de tecnologia verde
+        setTimeout(function() {
+            console.log("Aplicando correção automática para campos de tecnologia verde...");
+            if (typeof window.fixClasseAndSubclasse === 'function') {
+                window.fixClasseAndSubclasse();
+            } else {
+                console.error("Função fixClasseAndSubclasse não encontrada no escopo global");
+            }
+        }, 2500); // Delay maior para garantir que todos os scripts foram carregados
         
         // Script adicional para garantir que o campo de observações de tecnologias verdes esteja sempre habilitado
         // Garantir que o campo de observações de tecnologias verdes esteja sempre habilitado

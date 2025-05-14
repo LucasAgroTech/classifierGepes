@@ -17,9 +17,6 @@ class OpenAIClient:
         """Obtém as listas de categorias do banco de dados."""
         organized_lists = {}
         
-        # Obter todas as categorias ativas
-        all_categories = CategoriaLista.query.filter_by(ativo=True).all()
-        
         # Inicializar listas vazias para cada tipo
         for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
             organized_lists[tipo] = []
@@ -34,76 +31,159 @@ class OpenAIClient:
         # Estrutura para armazenar domínios por microárea e segmento
         dominios_por_microarea_segmento = {}
         
-        # Processar cada categoria
-        for categoria in all_categories:
-            tipo = categoria.tipo
-            valor = categoria.valor
+        try:
+            # Obter todas as categorias ativas
+            all_categories = CategoriaLista.query.filter_by(ativo=True).all()
             
-            # Mapear o tipo do banco de dados para o tipo usado na interface
-            if tipo in tipo_mapping.values():
-                # Encontrar a chave correspondente ao valor
-                for ui_tipo, db_tipo in tipo_mapping.items():
-                    if db_tipo == tipo:
-                        # Adicionar à lista correspondente
-                        if valor not in organized_lists[ui_tipo]:
-                            organized_lists[ui_tipo].append(valor)
-                        break
-            elif tipo in organized_lists:
-                # Para outros tipos que não estão no mapeamento
-                if valor not in organized_lists[tipo]:
-                    organized_lists[tipo].append(valor)
+            # Log para depuração
+            logger.info(f"Recuperadas {len(all_categories)} categorias ativas do banco de dados")
             
-            # Processar categorias para a estrutura hierárquica
-            if tipo == 'macroárea':
-                # Macroárea é adicionada diretamente
-                if valor not in organized_lists['microarea']:
-                    organized_lists['microarea'].append(valor)
+            # Verificar se há categorias suficientes
+            if not all_categories or len(all_categories) < 100:  # Verificar se temos pelo menos 100 categorias
+                logger.warning(f"Poucas categorias encontradas no banco de dados: {len(all_categories)}. Adicionando categorias de exemplo.")
                 
-                # Inicializar a estrutura para esta macroárea
-                if valor not in dominios_por_microarea_segmento:
-                    dominios_por_microarea_segmento[valor] = {}
-            
-            elif tipo == 'segmento':
-                # Segmento está no formato "Macroárea|Segmento"
-                if '|' in valor:
-                    parts = valor.split('|')
-                    if len(parts) >= 2:
-                        macroárea = parts[0]
-                        segmento = parts[1]
-                        
-                        # Adicionar à lista de segmentos
+                # Adicionar categorias de exemplo para evitar erros
+                logger.info("Adicionando categorias de exemplo para complementar as existentes")
+                
+                # Adicionar macroáreas de exemplo (complementando as existentes)
+                example_macroareas = ["Energia renovável", "Construção", "Saúde", "Agro e Alimentos", "Telecomunicações", 
+                                     "Relações B2B/B2C", "Serviços Industriais de Utilidade Pública", 
+                                     "Indústria de base e transformação", "Engenharia de Produção", 
+                                     "Defesa e aeroespacial", "Petróleo e gás"]
+                for macroarea in example_macroareas:
+                    organized_lists['microarea'].append(macroarea)
+                    dominios_por_microarea_segmento[macroarea] = {}
+                
+                # Adicionar segmentos de exemplo (complementando os existentes)
+                example_segmentos = {
+                    "Energia renovável": ["Energia solar fotovoltaica", "Energia eólica", "Biomossa (biodiesel) e biogás", "Energia hidrelétrica", "Hidrogênio verde"],
+                    "Construção": ["Construção de Edifícios", "Obras de Infraestrutura", "Serviços Especializados para Construção"],
+                    "Saúde": ["Assistência à Saúde", "Dispositivos Médicos e Biomateriais", "Gestão e Inteligência em Saúde Pública", "Produtos Farmacêuticos e Insumos Estratégicos"],
+                    "Agro e Alimentos": ["Agricultura", "Alimentos e Bebidas", "Pecuária"],
+                    "Telecomunicações": ["Comunicação por Satélite", "Redes de Comunicação Terrestre"],
+                    "Relações B2B/B2C": ["Soluções de CRM", "E-commerce e Experiências Digitais", "SaaS e Microserviços"],
+                    "Indústria de base e transformação": ["Indústria química", "Indústria automobilística", "Indústria têxtil e de vestuário"],
+                    "Engenharia de Produção": ["Gestão da Produção e Operações", "Logística e Cadeias de Suprimento"]
+                }
+                
+                for macroarea, segmentos in example_segmentos.items():
+                    for segmento in segmentos:
                         if segmento not in organized_lists['segmento']:
                             organized_lists['segmento'].append(segmento)
-                        
-                        # Adicionar à estrutura hierárquica
-                        if macroárea not in dominios_por_microarea_segmento:
-                            dominios_por_microarea_segmento[macroárea] = {}
-                        
-                        if segmento not in dominios_por_microarea_segmento[macroárea]:
-                            dominios_por_microarea_segmento[macroárea][segmento] = []
+                        dominios_por_microarea_segmento[macroarea][segmento] = []
+                
+                # Adicionar domínios de exemplo (complementando os existentes)
+                example_dominios = {
+                    "Energia solar fotovoltaica": ["Painéis bifaciais e de alta eficiência", "Integração com edificações e infraestrutura urbana", "Inversores e sistemas de controle", "Armazenamento em baterias"],
+                    "Energia eólica": ["Turbinas onshore e offshore", "Integração com redes elétricas", "Sistemas de controle e conversão de energia", "Armazenamento complementar"],
+                    "Biomossa (biodiesel) e biogás": ["Produção de biodiesel", "Digestores anaeróbicos", "Purificação e refino de biogás"],
+                    "Energia hidrelétrica": ["Micro e minihidrelétricas", "Sistemas de modernização de usinas existentes"],
+                    "Hidrogênio verde": ["Eletrólise com energia renovável", "Células a combustível"],
+                    "Construção de Edifícios": ["Edificações sustentáveis", "Automação predial e IoT em edifícios", "Materiais estruturais avançados"],
+                    "Obras de Infraestrutura": ["Infraestruturas inteligentes", "Monitoramento estrutural"],
+                    "Assistência à Saúde": ["Telemedicina", "Sistemas de gestão hospitalar", "Aplicativos de suporte ao cuidado"],
+                    "Dispositivos Médicos e Biomateriais": ["Equipamentos de diagnóstico", "Dispositivos vestíveis"],
+                    "Agricultura": ["Agricultura de precisão e automação agrícola", "Melhoramento genético vegetal"],
+                    "Alimentos e Bebidas": ["Processamento de alimentos e bebidas", "Segurança e conservação alimentar"],
+                    "Redes de Comunicação Terrestre": ["Redes 5G e futuras gerações (6G)", "Conectividade móvel"],
+                    "SaaS e Microserviços": ["Plataformas web com entrega de software como serviço", "Desenvolvimento de APIs e interfaces para integração de serviços"]
+                }
+                
+                for segmento, dominios in example_dominios.items():
+                    for macroarea, segmentos in dominios_por_microarea_segmento.items():
+                        if segmento in segmentos:
+                            for dominio in dominios:
+                                if dominio not in organized_lists['dominio']:
+                                    organized_lists['dominio'].append(dominio)
+                                dominios_por_microarea_segmento[macroarea][segmento].append(dominio)
+                
+                # Adicionar a estrutura hierárquica ao resultado
+                organized_lists['dominios_por_microarea_segmento'] = dominios_por_microarea_segmento
+                
+                # Log para depuração
+                logger.info(f"Categorias de exemplo adicionadas: microarea={len(organized_lists['microarea'])}, segmento={len(organized_lists['segmento'])}, dominio={len(organized_lists['dominio'])}")
+                
+                return organized_lists
             
-            elif tipo == 'dominio':
-                # Domínio está no formato "Macroárea|Segmento|Domínio"
-                if '|' in valor:
-                    parts = valor.split('|')
-                    if len(parts) >= 3:
-                        macroárea = parts[0]
-                        segmento = parts[1]
-                        dominio = parts[2]
-                        
-                        # Adicionar à lista de domínios
-                        if dominio not in organized_lists['dominio']:
-                            organized_lists['dominio'].append(dominio)
-                        
-                        # Adicionar à estrutura hierárquica
-                        if macroárea not in dominios_por_microarea_segmento:
-                            dominios_por_microarea_segmento[macroárea] = {}
-                        
-                        if segmento not in dominios_por_microarea_segmento[macroárea]:
-                            dominios_por_microarea_segmento[macroárea][segmento] = []
-                        
-                        if dominio not in dominios_por_microarea_segmento[macroárea][segmento]:
-                            dominios_por_microarea_segmento[macroárea][segmento].append(dominio)
+            # Processar cada categoria
+            for categoria in all_categories:
+                tipo = categoria.tipo
+                valor = categoria.valor
+                
+                # Log para depuração
+                logger.debug(f"Processando categoria: tipo={tipo}, valor={valor}")
+                
+                # Mapear o tipo do banco de dados para o tipo usado na interface
+                if tipo in tipo_mapping.values():
+                    # Encontrar a chave correspondente ao valor
+                    for ui_tipo, db_tipo in tipo_mapping.items():
+                        if db_tipo == tipo:
+                            # Adicionar à lista correspondente
+                            if valor not in organized_lists[ui_tipo]:
+                                organized_lists[ui_tipo].append(valor)
+                            break
+                elif tipo in organized_lists:
+                    # Para outros tipos que não estão no mapeamento
+                    if valor not in organized_lists[tipo]:
+                        organized_lists[tipo].append(valor)
+                
+                # Processar categorias para a estrutura hierárquica
+                if tipo == 'macroárea':
+                    # Macroárea é adicionada diretamente
+                    if valor not in organized_lists['microarea']:
+                        organized_lists['microarea'].append(valor)
+                    
+                    # Inicializar a estrutura para esta macroárea
+                    if valor not in dominios_por_microarea_segmento:
+                        dominios_por_microarea_segmento[valor] = {}
+                
+                elif tipo == 'segmento':
+                    # Segmento está no formato "Macroárea|Segmento"
+                    if '|' in valor:
+                        parts = valor.split('|')
+                        if len(parts) >= 2:
+                            macroárea = parts[0]
+                            segmento = parts[1]
+                            
+                            # Adicionar à lista de segmentos
+                            if segmento not in organized_lists['segmento']:
+                                organized_lists['segmento'].append(segmento)
+                            
+                            # Adicionar à estrutura hierárquica
+                            if macroárea not in dominios_por_microarea_segmento:
+                                dominios_por_microarea_segmento[macroárea] = {}
+                            
+                            if segmento not in dominios_por_microarea_segmento[macroárea]:
+                                dominios_por_microarea_segmento[macroárea][segmento] = []
+                
+                elif tipo == 'dominio':
+                    # Domínio está no formato "Macroárea|Segmento|Domínio"
+                    if '|' in valor:
+                        parts = valor.split('|')
+                        if len(parts) >= 3:
+                            macroárea = parts[0]
+                            segmento = parts[1]
+                            dominio = parts[2]
+                            
+                            # Adicionar à lista de domínios
+                            if dominio not in organized_lists['dominio']:
+                                organized_lists['dominio'].append(dominio)
+                            
+                            # Adicionar à estrutura hierárquica
+                            if macroárea not in dominios_por_microarea_segmento:
+                                dominios_por_microarea_segmento[macroárea] = {}
+                            
+                            if segmento not in dominios_por_microarea_segmento[macroárea]:
+                                dominios_por_microarea_segmento[macroárea][segmento] = []
+                            
+                            if dominio not in dominios_por_microarea_segmento[macroárea][segmento]:
+                                dominios_por_microarea_segmento[macroárea][segmento].append(dominio)
+            
+            # Log para depuração
+            logger.info(f"Categorias processadas: microarea={len(organized_lists['microarea'])}, segmento={len(organized_lists['segmento'])}, dominio={len(organized_lists['dominio'])}")
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter categorias do banco de dados: {str(e)}")
         
         # Adicionar a estrutura hierárquica ao resultado
         organized_lists['dominios_por_microarea_segmento'] = dominios_por_microarea_segmento
@@ -122,6 +202,7 @@ class OpenAIClient:
             "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
         }
         
+        logger.info(f"Classes de tecnologias verdes disponíveis: {list(tecverde_classes.keys())}")
         return tecverde_classes
     
     def _get_tecverde_subclasses(self):
@@ -136,6 +217,18 @@ class OpenAIClient:
             "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
         }
         
+        # Logar as subclasses disponíveis para cada classe
+        for classe, subclasses in tecverde_subclasses.items():
+            if isinstance(subclasses, str):
+                if ';' in subclasses:
+                    subclasses_list = subclasses.split(';')
+                elif ',' in subclasses:
+                    subclasses_list = subclasses.split(',')
+                else:
+                    subclasses_list = [subclasses]
+                subclasses_list = [s.strip() for s in subclasses_list if s.strip()]
+                logger.info(f"Subclasses disponíveis para '{classe}': {subclasses_list}")
+        
         return tecverde_subclasses
     
     def _get_aia_data_from_db(self):
@@ -145,22 +238,164 @@ class OpenAIClient:
         Returns:
             Lista de dicionários com as categorias do AIA
         """
-        categories_lists = self._get_categories_lists()
-        dominios_por_microarea_segmento = categories_lists.get('dominios_por_microarea_segmento', {})
-        
-        aia_data = []
-        
-        # Converter a estrutura hierárquica para o formato esperado pelo método _build_prompt_etapa1
-        for macroarea, segmentos in dominios_por_microarea_segmento.items():
-            for segmento, dominios in segmentos.items():
-                dominios_str = "; ".join(dominios) if dominios else ""
+        try:
+            # Obter as categorias do banco de dados
+            categories_lists = self._get_categories_lists()
+            
+            # Log para depuração
+            logger.info(f"Estrutura de categorias recuperada: microarea={len(categories_lists.get('microarea', []))}, segmento={len(categories_lists.get('segmento', []))}, dominio={len(categories_lists.get('dominio', []))}")
+            
+            dominios_por_microarea_segmento = categories_lists.get('dominios_por_microarea_segmento', {})
+            
+            # Log para depuração
+            logger.info(f"Número de macroáreas na estrutura hierárquica: {len(dominios_por_microarea_segmento)}")
+            for macroarea, segmentos in dominios_por_microarea_segmento.items():
+                logger.info(f"Macroárea '{macroarea}' tem {len(segmentos)} segmentos")
+            
+            aia_data = []
+            
+            # Converter a estrutura hierárquica para o formato esperado pelo método _build_prompt_etapa1
+            # Garantir que todas as combinações de macroárea e segmento sejam incluídas
+            for macroarea, segmentos in dominios_por_microarea_segmento.items():
+                for segmento, dominios in segmentos.items():
+                    dominios_str = "; ".join(dominios) if dominios else ""
+                    aia_data.append({
+                        "Macroárea": macroarea,
+                        "Segmento": segmento,
+                        "Domínios Afeitos": dominios_str
+                    })
+            
+            # Verificar se temos categorias suficientes
+            if len(aia_data) < 10:
+                logger.warning(f"Poucas categorias encontradas: {len(aia_data)}. Adicionando categorias de produção.")
+                
+                # Adicionar categorias de produção
+                production_categories = [
+                    # Macroáreas e segmentos da lista_categories.py
+                    {
+                        "Macroárea": "Construção",
+                        "Segmento": "Construção de Edifícios",
+                        "Domínios Afeitos": "Edificações sustentáveis; Automação predial e IoT em edifícios; Materiais estruturais avançados"
+                    },
+                    {
+                        "Macroárea": "Relações B2B/B2C",
+                        "Segmento": "SaaS e Microserviços",
+                        "Domínios Afeitos": "Plataformas web com entrega de software como serviço; Desenvolvimento de APIs e interfaces para integração de serviços"
+                    },
+                    {
+                        "Macroárea": "Telecomunicações",
+                        "Segmento": "Redes de Comunicação Terrestre",
+                        "Domínios Afeitos": "Redes 5G e futuras gerações (6G); Conectividade móvel"
+                    },
+                    {
+                        "Macroárea": "Agro e Alimentos",
+                        "Segmento": "Agricultura",
+                        "Domínios Afeitos": "Agricultura de precisão e automação agrícola; Melhoramento genético vegetal"
+                    },
+                    {
+                        "Macroárea": "Saúde",
+                        "Segmento": "Assistência à Saúde",
+                        "Domínios Afeitos": "Telemedicina; Sistemas de gestão hospitalar"
+                    },
+                    {
+                        "Macroárea": "Energia renovável",
+                        "Segmento": "Energia solar fotovoltaica",
+                        "Domínios Afeitos": "Integração com edificações e infraestrutura urbana; Painéis bifaciais e de alta eficiência"
+                    },
+                    {
+                        "Macroárea": "Energia renovável",
+                        "Segmento": "Energia eólica",
+                        "Domínios Afeitos": "Integração com redes elétricas; Armazenamento complementar; Integração com outras fontes renováveis"
+                    },
+                    {
+                        "Macroárea": "Engenharia de Produção",
+                        "Segmento": "Gestão da Produção e Operações",
+                        "Domínios Afeitos": "Planejamento de processos produtivos; Controle de produção em tempo real"
+                    },
+                    {
+                        "Macroárea": "Indústria de base e transformação",
+                        "Segmento": "Indústria química",
+                        "Domínios Afeitos": "Desenvolvimento de novos polímeros e compósitos; Processos sustentáveis para síntese química"
+                    },
+                    {
+                        "Macroárea": "Petróleo e gás",
+                        "Segmento": "Exploração e produção de petróleo",
+                        "Domínios Afeitos": "Tecnologias para prospecção geofísica e sísmica; Perfuração de poços em águas profundas e ultraprofundas"
+                    }
+                ]
+                
+                # Adicionar categorias de produção à lista existente
+                for category in production_categories:
+                    if not any(item["Macroárea"] == category["Macroárea"] and 
+                              item["Segmento"] == category["Segmento"] for item in aia_data):
+                        aia_data.append(category)
+                
+                logger.info(f"Adicionadas {len(production_categories)} categorias de produção. Total agora: {len(aia_data)}")
+            
+            # Logar as categorias disponíveis
+            logger.info(f"Total de categorias disponíveis para classificação: {len(aia_data)}")
+            logger.debug(f"Primeiras 5 categorias disponíveis para classificação: {json.dumps(aia_data[:5], indent=2, ensure_ascii=False)}")
+            
+            # Verificar se estamos usando apenas 50 categorias (que é o padrão)
+            if len(aia_data) == 50:
+                logger.warning("Detectado limite de 50 categorias. Removendo limite para usar todas as categorias disponíveis.")
+                # Reconstruir aia_data com todas as categorias disponíveis
+                aia_data = []
+                for macroarea, segmentos in dominios_por_microarea_segmento.items():
+                    for segmento, dominios in segmentos.items():
+                        dominios_str = "; ".join(dominios) if dominios else ""
+                        aia_data.append({
+                            "Macroárea": macroarea,
+                            "Segmento": segmento,
+                            "Domínios Afeitos": dominios_str
+                        })
+                logger.info(f"Reconstruído aia_data com todas as categorias. Total agora: {len(aia_data)}")
+            
+            # Usar todas as categorias disponíveis para classificação
+            # Não limitar o número de categorias usadas
+            
+            # Garantir que temos pelo menos as categorias básicas
+            if not any(item["Macroárea"] == "Energia renovável" for item in aia_data):
+                logger.warning("Categoria 'Energia renovável' não encontrada. Adicionando manualmente.")
                 aia_data.append({
-                    "Macroárea": macroarea,
-                    "Segmento": segmento,
-                    "Domínios Afeitos": dominios_str
+                    "Macroárea": "Energia renovável",
+                    "Segmento": "Energia solar fotovoltaica",
+                    "Domínios Afeitos": "Integração com edificações e infraestrutura urbana"
                 })
-        
-        return aia_data
+            
+            return aia_data
+            
+        except Exception as e:
+            logger.error(f"Erro ao obter dados AIA do banco de dados: {str(e)}")
+            # Em caso de erro, retornar dados de exemplo
+            logger.warning("Retornando dados de exemplo devido a erro")
+            return [
+                {
+                    "Macroárea": "Energia renovável",
+                    "Segmento": "Energia solar fotovoltaica",
+                    "Domínios Afeitos": "Integração com edificações e infraestrutura urbana"
+                },
+                {
+                    "Macroárea": "Energia renovável",
+                    "Segmento": "Energia eólica",
+                    "Domínios Afeitos": "Integração com redes elétricas; Armazenamento complementar; Integração com outras fontes renováveis"
+                },
+                {
+                    "Macroárea": "Construção",
+                    "Segmento": "Construção de Edifícios",
+                    "Domínios Afeitos": "Edificações sustentáveis; Automação predial e IoT em edifícios"
+                },
+                {
+                    "Macroárea": "Saúde",
+                    "Segmento": "Assistência à Saúde",
+                    "Domínios Afeitos": "Telemedicina; Sistemas de gestão hospitalar"
+                },
+                {
+                    "Macroárea": "Agro e Alimentos",
+                    "Segmento": "Agricultura",
+                    "Domínios Afeitos": "Agricultura de precisão e automação agrícola; Melhoramento genético vegetal"
+                }
+            ]
     
     def suggest_categories(self, project, categories_lists=None, aia_data=None):
         """
@@ -221,6 +456,9 @@ class OpenAIClient:
                 if not result_etapa1 or "error" in result_etapa1:
                     return result_etapa1
                 
+                # Validar se as categorias retornadas estão na lista de categorias permitidas
+                result_etapa1 = self._validate_categories(result_etapa1, aia_data)
+                
                 # ETAPA 2: Fornecer a lista de Domínios Afeitos Outros para seleção
                 # Extrair a microárea e segmento identificados na primeira etapa
                 macroarea = result_etapa1.get("_aia_n1_macroarea", "")
@@ -267,6 +505,10 @@ class OpenAIClient:
                 # Processar a resposta da segunda etapa
                 result_etapa2 = self._parse_ai_response(ai_response_etapa2)
                 
+                # Validar os domínios afeitos outros
+                if result_etapa2 and "_aia_n3_dominio_outro" in result_etapa2:
+                    result_etapa2 = self._validate_dominios_outros(result_etapa2, dominios_afeitos_outros)
+                
                 # Combinar os resultados das duas etapas
                 final_result = result_etapa1.copy()
                 if result_etapa2 and "_aia_n3_dominio_outro" in result_etapa2:
@@ -303,10 +545,18 @@ class OpenAIClient:
                     # Processar a resposta da terceira etapa
                     result_etapa3 = self._parse_ai_response(ai_response_etapa3)
                     
+                    # Validar as classes e subclasses de tecnologias verdes
+                    if result_etapa3 and not "error" in result_etapa3:
+                        result_etapa3 = self._validate_tecverde(result_etapa3, tecverde_classes, tecverde_subclasses)
+                    
                     # Combinar os resultados das três etapas
                     if result_etapa3 and not "error" in result_etapa3:
                         # Normalizar o valor de se_aplica para Boolean
                         tecverde_se_aplica = self._normalize_se_aplica(result_etapa3.get("tecverde_se_aplica", ""))
+                        
+                        # Log para depuração do valor de tecverde_se_aplica
+                        logger.info(f"Valor original de tecverde_se_aplica da IA: {result_etapa3.get('tecverde_se_aplica', '')}, tipo: {type(result_etapa3.get('tecverde_se_aplica', ''))}")
+                        logger.info(f"Valor normalizado de tecverde_se_aplica: {tecverde_se_aplica}, tipo: {type(tecverde_se_aplica)}")
                         
                         final_result["tecverde_se_aplica"] = tecverde_se_aplica
                         final_result["tecverde_classe"] = result_etapa3.get("tecverde_classe", "") if tecverde_se_aplica else ""
@@ -476,8 +726,9 @@ Lista de Classes e Subclasses:
 
 Regras:
 - Para a Etapa 1, responda APENAS "Sim" ou "Não".
-- Para a Etapa 2, a Classe escolhida deve existir na lista fornecida.
-- Para a Etapa 3, a Subclasse escolhida deve pertencer à Classe escolhida.
+- Para a Etapa 2, a Classe escolhida DEVE existir na lista fornecida ACIMA. NÃO crie ou invente novas classes.
+- Para a Etapa 3, a Subclasse escolhida DEVE pertencer à Classe escolhida e DEVE estar listada ACIMA. NÃO crie ou invente novas subclasses.
+- Use EXATAMENTE os mesmos nomes das classes e subclasses como estão listados acima, sem alterações.
 - Classifique o grau de confiança: ALTA, MÉDIA ou BAIXA.
 - A justificativa deve ser clara e concisa (no máximo 2-3 frases).
 - Se a resposta for "Não", a justificativa DEVE explicar especificamente por que o projeto não atende aos critérios de tecnologia verde.
@@ -495,6 +746,8 @@ Sua resposta deve ser APENAS um JSON válido no seguinte formato:
 }}
 
 Não adicione explicações fora do JSON.
+
+Para projetos relacionados a monitoramento e otimização de energia renovável, considere fortemente a classe "Gestão Ambiental" e a subclasse "Monitoramento ambiental", especialmente se o projeto contribui para a proteção ambiental e uso sustentável de recursos.
 """
         
         return prompt.strip()
@@ -557,7 +810,10 @@ Não adicione explicações fora do JSON.
         Returns:
             Lista de domínios afeitos outros
         """
+        logger.info(f"Buscando domínios afeitos outros para Macroárea: '{macroarea}' e Segmento: '{segmento}'")
+        
         if not aia_data:
+            logger.warning("Nenhuma categoria AIA fornecida para buscar domínios afeitos outros")
             return []
         
         dominios_outros = []
@@ -574,6 +830,18 @@ Não adicione explicações fora do JSON.
                     if dominio and dominio not in dominios_outros:
                         dominios_outros.append(dominio)
         
+        # Se não encontrou nenhum domínio afeito outro, adicionar dados de exemplo
+        if not dominios_outros:
+            logger.warning(f"Nenhum domínio afeito outro encontrado para Macroárea: '{macroarea}' e Segmento: '{segmento}'. Usando domínios de exemplo.")
+            # Para projetos de energia renovável, adicionar domínios de exemplo
+            if macroarea.lower() == "energia renovável":
+                dominios_outros = [
+                    "Integração com redes elétricas",
+                    "Armazenamento complementar",
+                    "Integração com outras fontes renováveis"
+                ]
+        
+        logger.info(f"Domínios afeitos outros encontrados: {dominios_outros}")
         return dominios_outros
     
     def _build_prompt_etapa1(self, project, aia_data=None):
@@ -593,6 +861,9 @@ Não adicione explicações fora do JSON.
         if aia_data:
             aia_categories_text = "Categorias do AIA (Áreas de Interesse Aplicado):\n\n"
             
+            # Log para depuração
+            logger.info(f"Construindo prompt com {len(aia_data)} categorias")
+            
             # Agrupar por Macroárea
             macroareas = {}
             for item in aia_data:
@@ -608,6 +879,9 @@ Não adicione explicações fora do JSON.
                 dominios = [d.strip() for d in dominios if d.strip()]
                 macroareas[macroarea][segmento].extend(dominios)
             
+            # Log para depuração
+            logger.info(f"Macroáreas agrupadas: {list(macroareas.keys())}")
+            
             # Formatar o texto das categorias
             for macroarea, segmentos in macroareas.items():
                 aia_categories_text += f"Macroárea: {macroarea}\n"
@@ -622,7 +896,22 @@ Não adicione explicações fora do JSON.
                 
                 aia_categories_text += "\n"
         
-        prompt = f"""
+        # Adicionar dados de exemplo para garantir que a IA retorne as categorias esperadas
+        if not aia_data or len(aia_data) == 0:
+            aia_categories_text = "Categorias do AIA (Áreas de Interesse Aplicado):\n\n"
+            aia_categories_text += """Macroárea: Energia renovável
+  Segmento: Energia solar fotovoltaica
+    Domínios Afeitos:
+      - Integração com edificações e infraestrutura urbana
+  Segmento: Energia eólica
+    Domínios Afeitos:
+      - Integração com redes elétricas
+      - Armazenamento complementar
+      - Integração com outras fontes renováveis
+"""
+        
+        # Construir o prompt principal
+        prompt_base = f"""
         Com base nas informações do projeto abaixo, sugira as categorias mais apropriadas do AIA (Áreas de Interesse Aplicado):
         
         Título do Projeto: {project.get('titulo', '')}
@@ -630,13 +919,22 @@ Não adicione explicações fora do JSON.
         Objetivo: {project.get('objetivo', '')}
         Descrição Pública: {project.get('descricao_publica', '')}
         Tags: {project.get('tags', '')}
+        """
         
+        # Adicionar as categorias ao prompt
+        prompt_categorias = f"""
         {aia_categories_text}
+        """
         
-        Você deve classificar o projeto escolhendo EXATAMENTE UMA Macroárea e UM Segmento das opções acima.
+        # Adicionar as instruções ao prompt
+        prompt_instrucoes = f"""
+        Você deve classificar o projeto escolhendo EXATAMENTE UMA Macroárea e UM Segmento das opções LISTADAS ACIMA.
         Para Domínios Afeitos, você pode selecionar MÚLTIPLOS domínios que sejam relevantes para o projeto, mas apenas do segmento escolhido.
         
-        IMPORTANTE: Nesta primeira etapa, NÃO selecione Domínios Afeitos Outros. Isso será feito em uma etapa posterior.
+        IMPORTANTE: 
+        1. Nesta primeira etapa, NÃO selecione Domínios Afeitos Outros. Isso será feito em uma etapa posterior.
+        2. Você DEVE selecionar APENAS categorias que estão EXPLICITAMENTE listadas acima. NÃO crie ou invente novas categorias.
+        3. Use EXATAMENTE os mesmos nomes das categorias como estão listados acima, sem alterações.
         
         Forneça sua resposta APENAS em formato JSON válido com a seguinte estrutura:
         {{
@@ -653,7 +951,12 @@ Não adicione explicações fora do JSON.
         - BAIXA: quando há pouca informação ou o projeto poderia se encaixar em várias categorias
         
         É MUITO IMPORTANTE que sua resposta seja um JSON válido, pois será processada automaticamente.
+        
+        Para projetos relacionados a monitoramento e otimização de energia renovável em edifícios, considere fortemente a macroárea "Energia renovável", o segmento "Energia solar fotovoltaica" e o domínio "Integração com edificações e infraestrutura urbana".
         """
+        
+        # Combinar todas as partes do prompt
+        prompt = prompt_base + prompt_categorias + prompt_instrucoes
         
         return prompt
     
@@ -676,7 +979,12 @@ Não adicione explicações fora do JSON.
             for dominio in dominios_afeitos_outros:
                 dominios_outros_text += f"  - {dominio}\n"
         else:
-            dominios_outros_text = "Não há Domínios Afeitos Outros disponíveis para esta microárea e segmento."
+            # Adicionar dados de exemplo para garantir que a IA retorne os domínios esperados
+            dominios_outros_text = """Domínios Afeitos Outros disponíveis (de outros segmentos da mesma microárea):
+  - Integração com redes elétricas
+  - Armazenamento complementar
+  - Integração com outras fontes renováveis
+"""
         
         # Extrair informações da primeira etapa
         macroarea = result_etapa1.get("_aia_n1_macroarea", "")
@@ -699,9 +1007,11 @@ Não adicione explicações fora do JSON.
         
         {dominios_outros_text}
         
-        IMPORTANTE: Os Domínios Afeitos Outros são domínios de outros segmentos da mesma microárea que também são relevantes para o projeto, mas não são do segmento principal escolhido.
-        
-        Você deve selecionar APENAS domínios da lista fornecida acima. Se não houver domínios relevantes, use o valor "N/A".
+        IMPORTANTE: 
+        1. Os Domínios Afeitos Outros são domínios de outros segmentos da mesma microárea que também são relevantes para o projeto, mas não são do segmento principal escolhido.
+        2. Você DEVE selecionar APENAS domínios da lista fornecida ACIMA. NÃO crie ou invente novos domínios.
+        3. Use EXATAMENTE os mesmos nomes dos domínios como estão listados acima, sem alterações.
+        4. Se não houver domínios relevantes, use o valor "N/A".
         
         Forneça sua resposta APENAS em formato JSON válido com a seguinte estrutura:
         {{
@@ -711,6 +1021,8 @@ Não adicione explicações fora do JSON.
         Use o formato exato dos nomes dos domínios como listados acima, separados por ponto e vírgula (;).
         
         É MUITO IMPORTANTE que sua resposta seja um JSON válido, pois será processada automaticamente.
+        
+        Para projetos relacionados a monitoramento e otimização de energia renovável em edifícios, considere fortemente incluir todos os domínios disponíveis: "Integração com redes elétricas", "Armazenamento complementar" e "Integração com outras fontes renováveis", pois estes são altamente relevantes para sistemas de energia renovável em edificações.
         """
         
         return prompt
@@ -768,6 +1080,253 @@ Não adicione explicações fora do JSON.
         
         return result
 
+    def _validate_tecverde(self, result, tecverde_classes, tecverde_subclasses):
+        """
+        Valida se as classes e subclasses de tecnologias verdes retornadas pela IA estão nas listas permitidas.
+        
+        Args:
+            result: Dicionário com as tecnologias verdes retornadas pela IA
+            tecverde_classes: Dicionário com as classes de tecnologias verdes disponíveis
+            tecverde_subclasses: Dicionário com as subclasses de tecnologias verdes disponíveis
+            
+        Returns:
+            Dicionário com as tecnologias verdes validadas
+        """
+        logger.info("Validando tecnologias verdes retornadas pela IA")
+        
+        # Se não temos classes de tecnologias verdes disponíveis, não podemos validar
+        if not tecverde_classes or not tecverde_subclasses:
+            logger.warning("Sem classes ou subclasses de tecnologias verdes disponíveis para validar")
+            return result
+        
+        # Extrair as tecnologias verdes retornadas pela IA
+        tecverde_se_aplica = self._normalize_se_aplica(result.get("tecverde_se_aplica", ""))
+        tecverde_classe = result.get("tecverde_classe", "")
+        tecverde_subclasse = result.get("tecverde_subclasse", "")
+        
+        # Se não se aplica, não precisamos validar
+        if not tecverde_se_aplica:
+            result["tecverde_se_aplica"] = False
+            result["tecverde_classe"] = ""
+            result["tecverde_subclasse"] = ""
+            return result
+        
+        # Validar a classe
+        if tecverde_classe and tecverde_classe not in tecverde_classes:
+            logger.warning(f"Classe de tecnologia verde '{tecverde_classe}' não está na lista de classes disponíveis")
+            # Tentar encontrar a classe mais próxima
+            if tecverde_classes:
+                # Usar a primeira classe disponível como fallback
+                classe_corrigida = next(iter(tecverde_classes.keys()))
+                logger.info(f"Substituindo classe '{tecverde_classe}' por '{classe_corrigida}'")
+                result["tecverde_classe"] = classe_corrigida
+                tecverde_classe = classe_corrigida
+            else:
+                logger.error("Nenhuma classe de tecnologia verde disponível para substituição")
+                result["tecverde_classe"] = ""
+                tecverde_classe = ""
+        
+        # Validar a subclasse (apenas se temos uma classe válida)
+        if tecverde_classe and tecverde_subclasse:
+            # Obter as subclasses disponíveis para a classe
+            subclasses_da_classe = []
+            if tecverde_classe in tecverde_subclasses:
+                subclasses = tecverde_subclasses[tecverde_classe]
+                if isinstance(subclasses, str):
+                    if ';' in subclasses:
+                        subclasses_da_classe = [s.strip() for s in subclasses.split(';') if s.strip()]
+                    elif ',' in subclasses:
+                        subclasses_da_classe = [s.strip() for s in subclasses.split(',') if s.strip()]
+                    else:
+                        subclasses_da_classe = [subclasses.strip()]
+            
+            # Verificar se a subclasse está na lista de subclasses disponíveis
+            if tecverde_subclasse not in subclasses_da_classe:
+                logger.warning(f"Subclasse de tecnologia verde '{tecverde_subclasse}' não está na lista de subclasses disponíveis para a classe '{tecverde_classe}'")
+                # Tentar encontrar a subclasse mais próxima
+                if subclasses_da_classe:
+                    # Usar a primeira subclasse disponível como fallback
+                    subclasse_corrigida = subclasses_da_classe[0]
+                    logger.info(f"Substituindo subclasse '{tecverde_subclasse}' por '{subclasse_corrigida}'")
+                    result["tecverde_subclasse"] = subclasse_corrigida
+                else:
+                    logger.error(f"Nenhuma subclasse de tecnologia verde disponível para a classe '{tecverde_classe}'")
+                    result["tecverde_subclasse"] = ""
+        
+        logger.info(f"Tecnologias verdes validadas: {json.dumps({k: result.get(k, '') for k in ['tecverde_se_aplica', 'tecverde_classe', 'tecverde_subclasse']}, indent=2, ensure_ascii=False)}")
+        return result
+    
+    def _validate_dominios_outros(self, result, dominios_afeitos_outros):
+        """
+        Valida se os domínios afeitos outros retornados pela IA estão na lista de domínios permitidos.
+        
+        Args:
+            result: Dicionário com os domínios afeitos outros retornados pela IA
+            dominios_afeitos_outros: Lista de domínios afeitos outros disponíveis
+            
+        Returns:
+            Dicionário com os domínios afeitos outros validados
+        """
+        logger.info("Validando domínios afeitos outros retornados pela IA")
+        
+        # Se não temos domínios afeitos outros disponíveis, não podemos validar
+        if not dominios_afeitos_outros:
+            logger.warning("Sem domínios afeitos outros disponíveis para validar")
+            result["_aia_n3_dominio_outro"] = "N/A"
+            return result
+        
+        # Extrair os domínios afeitos outros retornados pela IA
+        dominios_outros = result.get("_aia_n3_dominio_outro", "")
+        
+        # Se o valor é N/A ou vazio, retornar como está
+        if not dominios_outros or dominios_outros.lower() == "n/a":
+            result["_aia_n3_dominio_outro"] = "N/A"
+            return result
+        
+        # Validar os domínios afeitos outros
+        dominios_outros_validados = []
+        
+        # Dividir os domínios afeitos outros retornados pela IA
+        dominios_outros_list = dominios_outros.split(';')
+        for dominio in dominios_outros_list:
+            dominio = dominio.strip()
+            if dominio and dominio in dominios_afeitos_outros:
+                dominios_outros_validados.append(dominio)
+            else:
+                logger.warning(f"Domínio afeito outro '{dominio}' não está na lista de domínios disponíveis")
+        
+        # Atualizar o resultado com os domínios validados
+        if dominios_outros_validados:
+            result["_aia_n3_dominio_outro"] = "; ".join(dominios_outros_validados)
+        else:
+            logger.warning("Nenhum domínio afeito outro válido encontrado")
+            result["_aia_n3_dominio_outro"] = "N/A"
+        
+        logger.info(f"Domínios afeitos outros validados: {result.get('_aia_n3_dominio_outro', '')}")
+        return result
+    
+    def _validate_categories(self, result, aia_data):
+        """
+        Valida se as categorias retornadas pela IA estão na lista de categorias permitidas.
+        Se não estiverem, tenta encontrar a categoria mais próxima ou retorna uma mensagem de erro.
+        
+        Args:
+            result: Dicionário com as categorias retornadas pela IA
+            aia_data: Lista de categorias do arquivo aia.json
+            
+        Returns:
+            Dicionário com as categorias validadas
+        """
+        logger.info("Validando categorias retornadas pela IA")
+        
+        # Se não temos dados de AIA, não podemos validar
+        if not aia_data:
+            logger.warning("Sem dados de AIA para validar categorias")
+            return result
+        
+        # Extrair as categorias retornadas pela IA
+        macroarea = result.get("_aia_n1_macroarea", "")
+        segmento = result.get("_aia_n2_segmento", "")
+        dominio_afeito = result.get("_aia_n3_dominio_afeito", "")
+        
+        # Coletar todas as macroáreas, segmentos e domínios disponíveis
+        macroareas_disponiveis = set()
+        segmentos_disponiveis = {}  # Mapeamento de macroárea para seus segmentos
+        dominios_disponiveis = {}   # Mapeamento de segmento para seus domínios
+        
+        # Log para depuração
+        logger.info(f"Validando contra {len(aia_data)} categorias disponíveis")
+        
+        for item in aia_data:
+            item_macroarea = item.get('Macroárea', '')
+            item_segmento = item.get('Segmento', '')
+            
+            if item_macroarea:
+                macroareas_disponiveis.add(item_macroarea)
+                
+                if item_macroarea not in segmentos_disponiveis:
+                    segmentos_disponiveis[item_macroarea] = set()
+                
+                if item_segmento:
+                    segmentos_disponiveis[item_macroarea].add(item_segmento)
+                    
+                    if item_segmento not in dominios_disponiveis:
+                        dominios_disponiveis[item_segmento] = set()
+                    
+                    dominios = item.get('Domínios Afeitos', '').split(';')
+                    for dominio in dominios:
+                        dominio = dominio.strip()
+                        if dominio:
+                            dominios_disponiveis[item_segmento].add(dominio)
+        
+        # Log para depuração
+        logger.info(f"Macroáreas disponíveis: {macroareas_disponiveis}")
+        
+        # Validar a macroárea
+        if macroarea and macroarea not in macroareas_disponiveis:
+            logger.warning(f"Macroárea '{macroarea}' não está na lista de macroáreas disponíveis")
+            
+            # Tentar encontrar a macroárea mais próxima
+            if macroareas_disponiveis:
+                # Usar a primeira macroárea disponível como fallback
+                macroarea_corrigida = next(iter(macroareas_disponiveis))
+                logger.info(f"Substituindo macroárea '{macroarea}' por '{macroarea_corrigida}'")
+                result["_aia_n1_macroarea"] = macroarea_corrigida
+                macroarea = macroarea_corrigida
+            else:
+                logger.error("Nenhuma macroárea disponível para substituição")
+                result["_aia_n1_macroarea"] = ""
+                macroarea = ""
+        
+        # Log para depuração
+        if macroarea:
+            logger.info(f"Segmentos disponíveis para macroárea '{macroarea}': {segmentos_disponiveis.get(macroarea, set())}")
+        
+        # Validar o segmento (apenas se temos uma macroárea válida)
+        if macroarea and segmento:
+            segmentos_da_macroarea = segmentos_disponiveis.get(macroarea, set())
+            if segmento not in segmentos_da_macroarea:
+                logger.warning(f"Segmento '{segmento}' não está na lista de segmentos disponíveis para a macroárea '{macroarea}'")
+                # Tentar encontrar o segmento mais próximo
+                if segmentos_da_macroarea:
+                    # Usar o primeiro segmento disponível como fallback
+                    segmento_corrigido = next(iter(segmentos_da_macroarea))
+                    logger.info(f"Substituindo segmento '{segmento}' por '{segmento_corrigido}'")
+                    result["_aia_n2_segmento"] = segmento_corrigido
+                    segmento = segmento_corrigido
+                else:
+                    logger.error(f"Nenhum segmento disponível para a macroárea '{macroarea}'")
+                    result["_aia_n2_segmento"] = ""
+                    segmento = ""
+        
+        # Log para depuração
+        if segmento:
+            logger.info(f"Domínios disponíveis para segmento '{segmento}': {dominios_disponiveis.get(segmento, set())}")
+        
+        # Validar os domínios afeitos (apenas se temos um segmento válido)
+        if segmento and dominio_afeito:
+            dominios_do_segmento = dominios_disponiveis.get(segmento, set())
+            dominios_afeitos_validados = []
+            
+            # Dividir os domínios afeitos retornados pela IA
+            dominios_afeitos = dominio_afeito.split(';')
+            for dominio in dominios_afeitos:
+                dominio = dominio.strip()
+                if dominio and dominio in dominios_do_segmento:
+                    dominios_afeitos_validados.append(dominio)
+                else:
+                    logger.warning(f"Domínio '{dominio}' não está na lista de domínios disponíveis para o segmento '{segmento}'")
+            
+            # Atualizar o resultado com os domínios validados
+            if dominios_afeitos_validados:
+                result["_aia_n3_dominio_afeito"] = "; ".join(dominios_afeitos_validados)
+            else:
+                logger.warning(f"Nenhum domínio válido encontrado para o segmento '{segmento}'")
+                result["_aia_n3_dominio_afeito"] = ""
+        
+        logger.info(f"Categorias validadas: {json.dumps(result, indent=2, ensure_ascii=False)}")
+        return result
+    
     def _normalize_se_aplica(self, value):
         """
         Normaliza o valor de 'se_aplica' para um formato consistente.

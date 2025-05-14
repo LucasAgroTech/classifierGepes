@@ -104,6 +104,19 @@ function initAiSuggestions() {
         
         // Mostrar a seção de sugestões de tecnologias verdes
         if (data.tecverde_justificativa || data.tecverde_se_aplica || data.tecverde_confianca) {
+            // Garantir que tecverde_se_aplica seja tratado corretamente
+            // Converter para um formato consistente (string "1" ou "0")
+            if (data.tecverde_se_aplica === true || 
+                data.tecverde_se_aplica === "true" || 
+                data.tecverde_se_aplica === 1 || 
+                data.tecverde_se_aplica === "1" ||
+                data.tecverde_se_aplica === "Sim" || 
+                data.tecverde_se_aplica === "sim") {
+                data.tecverde_se_aplica = "1";
+            } else {
+                data.tecverde_se_aplica = "0";
+            }
+            
             console.log("Exibindo sugestões de tecnologias verdes:", {
                 seAplica: data.tecverde_se_aplica,
                 classe: data.tecverde_classe,
@@ -158,10 +171,15 @@ function initAiSuggestions() {
     function updateAiTecverdeCategories(data) {
         // Atualizar se aplica - converter valor para texto de forma consistente
         let seAplica = 0;
+        console.log("Verificando valor de tecverde_se_aplica:", data.tecverde_se_aplica, "tipo:", typeof data.tecverde_se_aplica);
+        
         if (data.tecverde_se_aplica === "1" || data.tecverde_se_aplica === 1 || 
             data.tecverde_se_aplica === true || data.tecverde_se_aplica === "true" || 
-            data.tecverde_se_aplica === "Sim") {
+            data.tecverde_se_aplica === "Sim" || data.tecverde_se_aplica === "sim") {
             seAplica = 1;
+            console.log("Valor convertido para seAplica = 1 (Sim/true)");
+        } else {
+            console.log("Valor mantido como seAplica = 0 (Não/false)");
         }
         const seAplicaTexto = seAplica === 1 ? "Sim" : "Não";
         $('#aiTecverdeSeAplica').text(seAplicaTexto || '-');
@@ -261,6 +279,9 @@ function initAiSuggestions() {
         if (justificativa) {
             console.log("Aplicando justificativa para tecnologias verdes:", justificativa);
             
+            // Garantir que o campo de observações esteja habilitado
+            $('#tecverde_observacoes').prop('disabled', false);
+            
             // Verificar se o campo de observações está vazio ou se estamos forçando a aplicação
             const observacoesAtuais = $('#tecverde_observacoes').val();
             
@@ -269,7 +290,8 @@ function initAiSuggestions() {
                 
                 // Formatar a justificativa de acordo com o valor de "se aplica"
                 let textoJustificativa = justificativa;
-                if (seAplica === "Não" || seAplica === "Nao") {
+                if (seAplica === "Não" || seAplica === "Nao" || seAplica === 0 || seAplica === "0" || 
+                    seAplica === false || seAplica === "false") {
                     textoJustificativa = "Motivo para não se aplicar: " + justificativa;
                 }
                 
@@ -381,6 +403,20 @@ function initAiSuggestions() {
         // Nova lógica: Aplicar apenas se o usuário NÃO tiver salvo tecnologias verdes manualmente
         if (!hasExistingTecverde && (data.tecverde_classe || data.tecverde_subclasse || data.tecverde_se_aplica)) {
             console.log("Usuário não salvou tecnologias verdes manualmente, aplicando sugestões da IA");
+            
+            // Garantir que tecverde_se_aplica seja tratado corretamente
+            // Converter para um formato consistente (string "1" ou "0")
+            if (data.tecverde_se_aplica === true || 
+                data.tecverde_se_aplica === "true" || 
+                data.tecverde_se_aplica === 1 || 
+                data.tecverde_se_aplica === "1" ||
+                data.tecverde_se_aplica === "Sim" || 
+                data.tecverde_se_aplica === "sim") {
+                data.tecverde_se_aplica = "1";
+            } else {
+                data.tecverde_se_aplica = "0";
+            }
+            
             applyTecverdeClassification(data, checkCompletion);
         } else {
             console.log("Usuário já salvou tecnologias verdes manualmente ou não há sugestões, mantendo os valores existentes");
@@ -437,8 +473,8 @@ function initAiSuggestions() {
                         texto: option.text
                     });
                     
-                    // Agora tentar definir via jQuery com o valor sem acento
-                    $('#tecverde_se_aplica').val("Nao");
+                    // Agora tentar definir via jQuery com o valor false
+                    $('#tecverde_se_aplica').val("false");
                 }
                 
                 // Disparar eventos de change
@@ -479,89 +515,130 @@ function initAiSuggestions() {
      * @param {Function} callback - Função para chamar quando concluído
      */
     function applyTecverdeClassification(data, callback) {
-        // Mapear campos da API para campos da UI
-        // Garantir que o valor seja tratado corretamente, independente se é string ou número
-        let seAplica = 0;
-        if (data.tecverde_se_aplica === "1" || data.tecverde_se_aplica === 1 || 
-            data.tecverde_se_aplica === true || data.tecverde_se_aplica === "true" || 
-            data.tecverde_se_aplica === "Sim") {
-            seAplica = 1;
+        console.log("Aplicando sugestões de tecnologias verdes via fixTecverdeSeAplica");
+        
+        // Usar a função fixTecverdeSeAplica para aplicar as sugestões
+        // Esta função já contém toda a lógica necessária para corrigir os campos
+        fixTecverdeSeAplica();
+        
+        // Aplicar justificativa se disponível
+        if (data.tecverde_justificativa) {
+            setTimeout(() => {
+                applyTecverdeJustification(data);
+            }, 800);
         }
         
-        const classe = data.tecverde_classe || '';
-        const subclasse = data.tecverde_subclasse || '';
-        const justificativa = data.tecverde_justificativa || '';
-        
-        console.log("Aplicando sugestões de tecnologias verdes:", {
-            seAplica, classe, subclasse, justificativa,
-            valorOriginal: data.tecverde_se_aplica,
-            tipoValorOriginal: typeof data.tecverde_se_aplica
-        });
-
-        // Aplicar as sugestões com um delay mínimo
+        // Completar a operação após um delay para garantir que tudo foi aplicado
         setTimeout(() => {
-            console.log("Iniciando aplicação das sugestões de tecnologias verdes");
-            
-            // Definir o campo "Se aplica" com base no valor binário
-            const selectElement = document.getElementById('tecverde_se_aplica');
-            if (selectElement && selectElement.options.length >= 3) {
-                // Selecionar com base no valor binário: 0 = Não (índice 2), 1 = Sim (índice 1)
-                const selectedIndex = seAplica === 1 ? 1 : 2;
-                selectElement.selectedIndex = selectedIndex;
-                console.log(`Opção selecionada pelo índice (${selectedIndex}): ${selectElement.options[selectedIndex].text}`);
-                
-                // Disparar eventos de mudança
-                $('#tecverde_se_aplica').trigger('change');
-                selectElement.dispatchEvent(new Event('change', { bubbles: true }));
-                
-                // Se for "Sim" (1), aplicar classe e subclasse
-                if (seAplica === 1) {
-                    // Pequeno delay para garantir que os campos estejam habilitados
-                    setTimeout(() => {
-                        if (classe) {
-                            $('#tecverde_classe').val(classe);
-                            console.log("Classe de tecnologia verde definida para:", classe);
-                            $('#tecverde_classe').trigger('change');
-                            
-                            // Aguardar atualização das subclasses
-                            setTimeout(() => {
-                                if (subclasse) {
-                                    $('#tecverde_subclasse').val(subclasse);
-                                    console.log("Subclasse de tecnologia verde definida para:", subclasse);
-                                    $('#tecverde_subclasse').trigger('change');
-                                }
-                                
-                                // Aplicar justificativa
-                                if (justificativa) {
-                                    applyTecverdeJustification(data);
-                                }
-                                
-                                if (typeof callback === 'function') callback();
-                            }, 500);
-                        } else {
-                            if (justificativa) {
-                                applyTecverdeJustification(data);
-                            }
-                            if (typeof callback === 'function') callback();
-                        }
-                    }, 300);
-                } else {
-                    // Para "Não" (0), limpar campos e aplicar justificativa
-                    $('#tecverde_classe, #tecverde_subclasse').val('');
-                    console.log("Valores de classe e subclasse limpos (se_aplica = 0)");
-                    
-                    if (justificativa) {
-                        applyTecverdeJustification(data);
-                    }
-                    
-                    if (typeof callback === 'function') callback();
-                }
-            } else {
-                console.error("Estrutura do select inválida");
-                if (typeof callback === 'function') callback();
-            }
-        }, 300);
+            if (typeof callback === 'function') callback();
+        }, 1500);
     }
+    
+    /**
+     * Função para corrigir os campos de classe e subclasse
+     * Adaptada do debug_tecverde.js
+     */
+function fixClasseAndSubclasse() {
+    console.log("Fixing classe and subclasse fields...");
+    
+    // Check if we're on the categorize page
+    if (!document.getElementById('tecverde_classe') || !document.getElementById('tecverde_subclasse')) {
+        console.log("Not on categorize page or classe/subclasse fields not found");
+        return;
+    }
+    
+    // Check if AI suggestion data is available
+    if (typeof aiSuggestionData === 'undefined') {
+        console.log("AI Suggestion Data not available, cannot fix");
+        return;
+    }
+    
+    const classe = aiSuggestionData.tecverde_classe;
+    const subclasse = aiSuggestionData.tecverde_subclasse;
+    
+    console.log("Fixing with AI Values:", { classe, subclasse });
+    
+    // Make sure the fields are enabled
+    $('#tecverde_classe, #tecverde_subclasse').prop('disabled', false);
+    $('#tecverde_classe, #tecverde_subclasse').removeClass('bg-light');
+    
+    // Fix classe field
+    if (classe) {
+        const classeElement = document.getElementById('tecverde_classe');
+        
+        // Check if the classe exists in the options
+        let classeExists = false;
+        let classeIndex = -1;
+        
+        for (let i = 0; i < classeElement.options.length; i++) {
+            if (classeElement.options[i].value === classe) {
+                classeExists = true;
+                classeIndex = i;
+                break;
+            }
+        }
+        
+        if (!classeExists) {
+            console.log(`Classe '${classe}' not found in options. Adding it.`);
+            const newOption = new Option(classe, classe);
+            classeElement.add(newOption);
+            classeIndex = classeElement.options.length - 1;
+        }
+        
+        // Set the value
+        classeElement.selectedIndex = classeIndex;
+        classeElement.value = classe;
+        
+        // Trigger change event to update subclasse options
+        const event = new Event('change', { bubbles: true });
+        classeElement.dispatchEvent(event);
+        
+        // Also trigger jQuery change event for compatibility
+        $(classeElement).trigger('change');
+        
+        console.log(`Classe set to '${classe}'`);
+        
+        // Wait for subclasse options to update
+        setTimeout(() => {
+            // Fix subclasse field
+            if (subclasse) {
+                const subclasseElement = document.getElementById('tecverde_subclasse');
+                
+                // Check if the subclasse exists in the options
+                let subclasseExists = false;
+                let subclasseIndex = -1;
+                
+                for (let i = 0; i < subclasseElement.options.length; i++) {
+                    if (subclasseElement.options[i].value === subclasse) {
+                        subclasseExists = true;
+                        subclasseIndex = i;
+                        break;
+                    }
+                }
+                
+                if (!subclasseExists) {
+                    console.log(`Subclasse '${subclasse}' not found in options. Adding it.`);
+                    const newOption = new Option(subclasse, subclasse);
+                    subclasseElement.add(newOption);
+                    subclasseIndex = subclasseElement.options.length - 1;
+                }
+                
+                // Set the value
+                subclasseElement.selectedIndex = subclasseIndex;
+                subclasseElement.value = subclasse;
+                
+                // Trigger change event
+                const event = new Event('change', { bubbles: true });
+                subclasseElement.dispatchEvent(event);
+                
+                // Also trigger jQuery change event for compatibility
+                $(subclasseElement).trigger('change');
+                
+                console.log(`Subclasse set to '${subclasse}'`);
+            }
+        }, 500);
+    }
+}
     
     /**
      * Função para aplicar as sugestões de classificação por área de interesse
@@ -833,7 +910,7 @@ function initAiSuggestions() {
             
             // Enviar via AJAX
             $.ajax({
-                url: `/save_ai_rating/${projectId}`,
+                url: `/api/ratings/save`,
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(data),
@@ -925,7 +1002,94 @@ $(document).ready(function() {
                     aiLoading.completeProgress();
                 }, 3000);
             }
+            
+            // Verificar e corrigir os campos de tecnologias verdes
+            setTimeout(function() {
+                verificarECorrigirCamposTecverdes();
+            }, 2000);
         });
+        
+        // Função para verificar e corrigir os campos de tecnologias verdes
+        function verificarECorrigirCamposTecverdes() {
+            console.log("Verificando e corrigindo campos de tecnologias verdes...");
+            
+            // Verificar se temos dados de sugestão da IA
+            if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
+                // Garantir que tecverde_se_aplica seja tratado corretamente
+                if (aiSuggestionData.tecverde_se_aplica === "1" || aiSuggestionData.tecverde_se_aplica === 1) {
+                    aiSuggestionData.tecverde_se_aplica = true;
+                } else if (aiSuggestionData.tecverde_se_aplica === "0" || aiSuggestionData.tecverde_se_aplica === 0) {
+                    aiSuggestionData.tecverde_se_aplica = false;
+                }
+                
+                const seAplica = aiSuggestionData.tecverde_se_aplica;
+                const classe = aiSuggestionData.tecverde_classe;
+                const subclasse = aiSuggestionData.tecverde_subclasse;
+                
+                console.log("Dados de tecnologias verdes da IA:", {
+                    seAplica, classe, subclasse
+                });
+                
+                // Verificar se os campos estão preenchidos corretamente
+                const currentSeAplica = $('#tecverde_se_aplica').val();
+                const currentClasse = $('#tecverde_classe').val();
+                const currentSubclasse = $('#tecverde_subclasse').val();
+                
+                console.log("Valores atuais nos campos:", {
+                    seAplica: currentSeAplica,
+                    classe: currentClasse,
+                    subclasse: currentSubclasse
+                });
+                
+                // Se os campos não estiverem preenchidos corretamente, tentar corrigir
+                if (seAplica && !currentSeAplica) {
+                    console.log("Campo 'Se aplica' não está preenchido corretamente. Tentando corrigir...");
+                    
+                    // Garantir que o campo esteja habilitado
+                    $('#tecverde_se_aplica').prop('disabled', false);
+                    
+                    // Definir o valor
+                    if (seAplica === "1" || seAplica === 1 || seAplica === true || seAplica === "true" || 
+                        seAplica === "Sim" || seAplica === "sim") {
+                        $('#tecverde_se_aplica').val("true");
+                    } else {
+                        $('#tecverde_se_aplica').val("false");
+                    }
+                    
+                    // Disparar evento de mudança
+                    $('#tecverde_se_aplica').trigger('change');
+                }
+                
+                // Se o campo "Se aplica" for "Sim" e os campos de classe e subclasse não estiverem preenchidos
+                if ((seAplica === "1" || seAplica === 1 || seAplica === true || seAplica === "true" || seAplica === "Sim") && 
+                    (classe && !currentClasse || subclasse && !currentSubclasse)) {
+                    
+                    console.log("Campos de classe ou subclasse não estão preenchidos corretamente. Tentando corrigir...");
+                    
+                    // Garantir que os campos estejam habilitados
+                    $('#tecverde_classe, #tecverde_subclasse').prop('disabled', false);
+                    
+                    // Definir os valores
+                    if (classe && !currentClasse) {
+                        $('#tecverde_classe').val(classe);
+                        $('#tecverde_classe').trigger('change');
+                    }
+                    
+                    // Aguardar um pouco para definir a subclasse
+                    setTimeout(function() {
+                        if (subclasse && !currentSubclasse) {
+                            $('#tecverde_subclasse').val(subclasse);
+                            $('#tecverde_subclasse').trigger('change');
+                        }
+                    }, 500);
+                }
+                
+                // Garantir que o campo de observações esteja preenchido
+                if (aiSuggestionData.tecverde_justificativa) {
+                    applyTecverdeJustification(aiSuggestionData, true);
+                }
+            }
+        }
     } else {
         // Se não estamos na página de categorização, garantir que o overlay seja escondido
         if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
@@ -939,6 +1103,134 @@ $(document).ready(function() {
         $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
     });
 });
+
+/**
+ * Function to fix the tecverde_se_aplica field
+ * Adapted from debug_tecverde.js
+ */
+function fixTecverdeSeAplica() {
+    console.log("Attempting to fix tecverde_se_aplica field...");
+    
+    // Check if we're on the categorize page
+    if (!document.getElementById('tecverde_se_aplica')) {
+        console.log("Not on categorize page or tecverde_se_aplica field not found");
+        return;
+    }
+    
+    // Check if AI suggestion data is available
+    if (typeof aiSuggestionData === 'undefined') {
+        console.log("AI Suggestion Data not available, cannot fix");
+        return;
+    }
+    
+    const aiValue = aiSuggestionData.tecverde_se_aplica;
+    const selectElement = document.getElementById('tecverde_se_aplica');
+    
+    console.log("Fixing with AI Value:", aiValue, "Type:", typeof aiValue);
+    
+    // Determine the correct index to select
+    let targetIndex = -1;
+    
+    // Handle boolean values directly
+    if (aiValue === true) {
+        console.log("Boolean TRUE detected, selecting 'Sim'");
+        // Find the "Sim" option (usually index 1)
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].text === "Sim") {
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        // If not found by text, try index 1
+        if (targetIndex === -1 && selectElement.options.length > 1) {
+            targetIndex = 1;
+        }
+    } else if (aiValue === false) {
+        console.log("Boolean FALSE detected, selecting 'Não'");
+        // Find the "Não" option (usually index 2)
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].text === "Não") {
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        // If not found by text, try index 2
+        if (targetIndex === -1 && selectElement.options.length > 2) {
+            targetIndex = 2;
+        }
+    } 
+    // Handle string and number values as before
+    else if (aiValue === "true" || aiValue === 1 || aiValue === "1" || aiValue === "Sim" || aiValue === "sim") {
+        // Find the "Sim" option (usually index 1)
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].text === "Sim") {
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        // If not found by text, try index 1
+        if (targetIndex === -1 && selectElement.options.length > 1) {
+            targetIndex = 1;
+        }
+    } else if (aiValue === "false" || aiValue === 0 || aiValue === "0" || aiValue === "Não" || aiValue === "Nao" || aiValue === "não" || aiValue === "nao") {
+        // Find the "Não" option (usually index 2)
+        for (let i = 0; i < selectElement.options.length; i++) {
+            if (selectElement.options[i].text === "Não") {
+                targetIndex = i;
+                break;
+            }
+        }
+        
+        // If not found by text, try index 2
+        if (targetIndex === -1 && selectElement.options.length > 2) {
+            targetIndex = 2;
+        }
+    }
+    
+    if (targetIndex !== -1) {
+        console.log(`Setting select to index ${targetIndex} (${selectElement.options[targetIndex].text})`);
+        
+        // Set the selected index
+        selectElement.selectedIndex = targetIndex;
+        
+        // Also set the value directly
+        const newValue = selectElement.options[targetIndex].value;
+        selectElement.value = newValue;
+        
+        // Trigger change event
+        const event = new Event('change', { bubbles: true });
+        selectElement.dispatchEvent(event);
+        
+        // Also trigger jQuery change event for compatibility
+        $(selectElement).trigger('change');
+        
+        console.log("Fix applied, new value:", selectElement.value);
+        
+        // If "Sim" was selected, also fix classe and subclasse
+        if (targetIndex === 1 || selectElement.options[targetIndex].text === "Sim") {
+            setTimeout(fixClasseAndSubclasse, 500);
+        } else {
+            // If "Não" was selected, ensure classe and subclasse are disabled and empty
+            setTimeout(function() {
+                $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true).val('').addClass('bg-light');
+                console.log("Disabled and cleared classe and subclasse fields for 'Não' option");
+            }, 500);
+        }
+        
+        // Call verificarTecverdeSePlica to ensure proper state
+        setTimeout(function() {
+            if (typeof window.verificarTecverdeSePlica === 'function') {
+                window.verificarTecverdeSePlica();
+                console.log("Called verificarTecverdeSePlica to ensure proper state");
+            }
+        }, 600);
+    } else {
+        console.log("Could not determine the correct option to select");
+    }
+}
 
 /**
  * Função para inicializar os botões de exibição de justificativa
