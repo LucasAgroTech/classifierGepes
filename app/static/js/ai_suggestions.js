@@ -42,30 +42,16 @@ function initAiSuggestions() {
             console.log("Nenhuma sugestão da IA disponível");
             
             // Esconder o overlay de carregamento se estiver ativo
-            if (typeof aiLoading !== 'undefined') {
-                // Forçar a limpeza do overlay independentemente do estado do localStorage
-                console.log('Forçando limpeza do overlay após processamento das sugestões da IA');
-                aiLoading.forceCleanup();
-                
-                // Garantir que o localStorage também seja limpo
-                localStorage.removeItem('aiLoadingActive');
-                localStorage.removeItem('aiLoadingMessage');
-                localStorage.removeItem('aiLoadingSubmessage');
+            if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
+                aiLoading.completeProgress();
             }
         }
     } catch (error) {
         console.error("Erro ao processar dados da IA:", error);
         
         // Esconder o overlay de carregamento em caso de erro
-        if (typeof aiLoading !== 'undefined') {
-            // Forçar a limpeza do overlay independentemente do estado do localStorage
-            console.log('Forçando limpeza do overlay após erro no processamento das sugestões da IA');
-            aiLoading.forceCleanup();
-            
-            // Garantir que o localStorage também seja limpo
-            localStorage.removeItem('aiLoadingActive');
-            localStorage.removeItem('aiLoadingMessage');
-            localStorage.removeItem('aiLoadingSubmessage');
+        if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
+            aiLoading.completeProgress();
         }
     }
     
@@ -170,8 +156,13 @@ function initAiSuggestions() {
      * @param {Object} data - Dados de sugestão da IA
      */
     function updateAiTecverdeCategories(data) {
-        // Atualizar se aplica - converter valor binário para texto
-        const seAplica = parseInt(data.tecverde_se_aplica);
+        // Atualizar se aplica - converter valor para texto de forma consistente
+        let seAplica = 0;
+        if (data.tecverde_se_aplica === "1" || data.tecverde_se_aplica === 1 || 
+            data.tecverde_se_aplica === true || data.tecverde_se_aplica === "true" || 
+            data.tecverde_se_aplica === "Sim") {
+            seAplica = 1;
+        }
         const seAplicaTexto = seAplica === 1 ? "Sim" : "Não";
         $('#aiTecverdeSeAplica').text(seAplicaTexto || '-');
         
@@ -306,15 +297,8 @@ function initAiSuggestions() {
             console.error("Não há sugestões da IA para aplicar");
             
             // Esconder o overlay de carregamento se estiver ativo
-            if (typeof aiLoading !== 'undefined') {
-                // Forçar a limpeza do overlay independentemente do estado do localStorage
-                console.log('Forçando limpeza do overlay quando não há sugestões da IA para aplicar');
-                aiLoading.forceCleanup();
-                
-                // Garantir que o localStorage também seja limpo
-                localStorage.removeItem('aiLoadingActive');
-                localStorage.removeItem('aiLoadingMessage');
-                localStorage.removeItem('aiLoadingSubmessage');
+            if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
+                aiLoading.completeProgress();
             }
             
             return;
@@ -341,6 +325,20 @@ function initAiSuggestions() {
             tecverde_subclasse: currentTecverdeSubclasse
         });
         
+        // Verificar se o usuário já salvou categorias manualmente
+        // Isso é indicado pela variável 'existing' que é passada para o template
+        const hasExistingAreaInteresse = $('#microarea').data('has-existing') === true || 
+                                        (currentMicroarea && $('#user_modified').val() === 'true');
+        
+        const hasExistingTecverde = $('#tecverde_se_aplica').data('has-existing') === true || 
+                                   (currentTecverdeSePlica && $('#user_modified').val() === 'true');
+        
+        console.log("Verificação de dados existentes:", {
+            hasExistingAreaInteresse: hasExistingAreaInteresse,
+            hasExistingTecverde: hasExistingTecverde,
+            userModified: $('#user_modified').val()
+        });
+        
         // Indicar que estamos aplicando sugestões da IA (para não marcar como modificado pelo usuário)
         window.applyingAiSuggestions = true;
         
@@ -363,46 +361,29 @@ function initAiSuggestions() {
                 }
                 
                 // Esconder o overlay de carregamento se estiver ativo
-                if (typeof aiLoading !== 'undefined') {
-                    // Forçar a limpeza do overlay independentemente do estado do localStorage
-                    console.log('Forçando limpeza do overlay após completar todas as operações');
-                    aiLoading.forceCleanup();
-                    
-                    // Garantir que o localStorage também seja limpo
-                    localStorage.removeItem('aiLoadingActive');
-                    localStorage.removeItem('aiLoadingMessage');
-                    localStorage.removeItem('aiLoadingSubmessage');
+                if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
+                    aiLoading.completeProgress();
                 }
             }
         }
         
-        // Verificar se há dados salvos pelo usuário para classificação por área de interesse
-        const hasUserAiaData = currentMicroarea || currentSegmento || 
-            (currentDominio && currentDominio.length > 0) || 
-            (currentDominioOutros && currentDominioOutros.length > 0);
-        
-        // Verificar se há dados salvos pelo usuário para tecnologias verdes
-        const hasUserTecverdeData = currentTecverdeSePlica || currentTecverdeClasse || currentTecverdeSubclasse;
-        
-        // Aplicar sugestões para classificação por área de interesse apenas se não houver dados do usuário
-        if (!hasUserAiaData) {
-            console.log("Não há dados salvos pelo usuário para classificação por área de interesse, aplicando sugestões da IA");
+        // Aplicar sugestões para classificação por área de interesse
+        // Nova lógica: Aplicar apenas se o usuário NÃO tiver salvo categorias manualmente
+        if (!hasExistingAreaInteresse) {
+            console.log("Usuário não salvou categorias manualmente, aplicando sugestões da IA para área de interesse");
             applyAiaClassification(data, checkCompletion);
         } else {
-            console.log("Dados do usuário encontrados para classificação por área de interesse, mantendo dados do usuário");
+            console.log("Usuário já salvou categorias manualmente, mantendo os valores existentes para área de interesse");
             checkCompletion(); // Marcar como concluído mesmo se não aplicar
         }
         
-        // Aplicar sugestões para tecnologias verdes apenas se não houver dados do usuário e houver sugestões da IA
-        if (!hasUserTecverdeData && (data.tecverde_classe || data.tecverde_subclasse || data.tecverde_se_aplica)) {
-            console.log("Não há dados salvos pelo usuário para tecnologias verdes, aplicando sugestões da IA");
+        // Aplicar sugestões para tecnologias verdes
+        // Nova lógica: Aplicar apenas se o usuário NÃO tiver salvo tecnologias verdes manualmente
+        if (!hasExistingTecverde && (data.tecverde_classe || data.tecverde_subclasse || data.tecverde_se_aplica)) {
+            console.log("Usuário não salvou tecnologias verdes manualmente, aplicando sugestões da IA");
             applyTecverdeClassification(data, checkCompletion);
         } else {
-            if (hasUserTecverdeData) {
-                console.log("Dados do usuário encontrados para tecnologias verdes, mantendo dados do usuário");
-            } else {
-                console.log("Não há sugestões da IA para tecnologias verdes");
-            }
+            console.log("Usuário já salvou tecnologias verdes manualmente ou não há sugestões, mantendo os valores existentes");
             checkCompletion(); // Marcar como concluído mesmo se não aplicar
         }
     }
@@ -499,13 +480,22 @@ function initAiSuggestions() {
      */
     function applyTecverdeClassification(data, callback) {
         // Mapear campos da API para campos da UI
-        const seAplica = parseInt(data.tecverde_se_aplica) || 0;
+        // Garantir que o valor seja tratado corretamente, independente se é string ou número
+        let seAplica = 0;
+        if (data.tecverde_se_aplica === "1" || data.tecverde_se_aplica === 1 || 
+            data.tecverde_se_aplica === true || data.tecverde_se_aplica === "true" || 
+            data.tecverde_se_aplica === "Sim") {
+            seAplica = 1;
+        }
+        
         const classe = data.tecverde_classe || '';
         const subclasse = data.tecverde_subclasse || '';
         const justificativa = data.tecverde_justificativa || '';
         
         console.log("Aplicando sugestões de tecnologias verdes:", {
-            seAplica, classe, subclasse, justificativa
+            seAplica, classe, subclasse, justificativa,
+            valorOriginal: data.tecverde_se_aplica,
+            tipoValorOriginal: typeof data.tecverde_se_aplica
         });
 
         // Aplicar as sugestões com um delay mínimo
@@ -589,265 +579,184 @@ function initAiSuggestions() {
             microarea, segmento, dominio, dominio_outros
         });
         
-        // Função para aplicar domínios após os selects de microarea e segmento estiverem atualizados
-        function aplicarDominios() {
-            console.log("Aplicando domínios após atualização dos selects...");
+        // Aplicar as sugestões com um delay mínimo
+        setTimeout(() => {
+            console.log("Iniciando aplicação das sugestões");
             
-            // Aplicar domínios
-            if (dominio) {
-                let dominioValues = [];
-                if (typeof dominio === 'string' && dominio.includes(';')) {
-                    dominioValues = dominio.split(';').map(d => d.trim()).filter(d => d);
-                } else if (Array.isArray(dominio)) {
-                    dominioValues = dominio.filter(d => d);
-                } else if (dominio) {
-                    dominioValues = [dominio];
-                }
-                
-                if (dominioValues.length > 0) {
-                    console.log("Valores de domínio a aplicar:", dominioValues);
-                    
-                    // Verificar se há opções disponíveis no select
-                    const hasOptions = $('#dominio option').length > 0;
-                    console.log("Opções disponíveis no select de domínio:", hasOptions, "Total:", $('#dominio option').length);
-                    
-                    // Forçar a adição dos valores como options se não existirem
-                    if (!hasOptions && dominioValues.length > 0) {
-                        console.log("Não há opções no select de domínio, adicionando os valores manualmente");
-                        dominioValues.forEach(value => {
-                            $('#dominio').append(new Option(value, value));
-                        });
-                        console.log(`Adicionadas ${dominioValues.length} opções ao select de domínio`);
-                    }
-                    
-                    // Verificar se estamos usando Choices.js
-                    if (window.dominioChoices) {
-                        try {
-                            // Destruir e recriar o Choices.js para garantir que está atualizado
-                            if (typeof window.dominioChoices.destroy === 'function') {
-                                window.dominioChoices.destroy();
-                                console.log("Choices.js para domínio destruído para recriação");
-                            }
-                            
-                            // Recriar o Choices.js
-                            window.dominioChoices = new Choices('#dominio', {
-                                removeItemButton: true,
-                                searchEnabled: true,
-                                searchPlaceholderValue: 'Pesquisar domínios...',
-                                placeholder: true,
-                                placeholderValue: 'Selecione os domínios',
-                                noResultsText: 'Nenhum resultado encontrado',
-                                noChoicesText: 'Nenhuma opção disponível',
-                                itemSelectText: 'Clique para selecionar',
-                                classNames: {
-                                    containerOuter: 'choices shadow-sm'
-                                }
-                            });
-                            
-                            // Adicionar os valores
-                            window.dominioChoices.setChoiceByValue(dominioValues);
-                            console.log("Domínios definidos via Choices.js recriado");
-                        } catch (e) {
-                            console.error("Erro ao definir domínios via Choices.js:", e);
-                            // Fallback para o método tradicional
-                            $('#dominio').val(dominioValues);
-                            $('#dominio').trigger('change');
-                            console.log("Domínios definidos via jQuery (fallback)");
-                        }
-                    } else {
-                        // Fallback para o método tradicional
-                        $('#dominio').val(dominioValues);
-                        // Forçar o evento change para garantir que os listeners sejam acionados
-                        $('#dominio').trigger('change');
-                        console.log("Domínios definidos via jQuery");
-                    }
-                }
-            }
+            // Garantir que a flag applyingAiSuggestions esteja definida
+            window.applyingAiSuggestions = true;
+            console.log("Flag applyingAiSuggestions definida como TRUE");
             
-            // Aplicar domínios outros
-            if (dominio_outros) {
-                // Tratar valores N/A ou vazios
-                if (dominio_outros === 'N/A' || dominio_outros === '') {
-                    console.log("Domínios afeitos outros está vazio ou marcado como N/A. Definindo como vazio no formulário.");
-                    // Limpar o campo de domínios outros
-                    $('#dominio_outros').val([]);
-                    
-                    // Atualizar o select para refletir as mudanças
-                    $('#dominio_outros').trigger('change');
-                    
-                    // Adicionar um atributo de dados para indicar que foi definido como N/A
-                    $('#dominio_outros').attr('data-na', 'true');
-                } else {
-                    let dominioOutrosValues = [];
-                    if (typeof dominio_outros === 'string' && dominio_outros.includes(';')) {
-                        dominioOutrosValues = dominio_outros.split(';').map(d => d.trim()).filter(d => d);
-                    } else if (Array.isArray(dominio_outros)) {
-                        dominioOutrosValues = dominio_outros.filter(d => d);
-                    } else if (dominio_outros) {
-                        dominioOutrosValues = [dominio_outros];
-                    }
-                    
-                    if (dominioOutrosValues.length > 0) {
-                        console.log("Valores de domínio outros a aplicar:", dominioOutrosValues);
-                        
-                        // Verificar se há opções disponíveis no select
-                        const hasOptions = $('#dominio_outros option').length > 0;
-                        console.log("Opções disponíveis no select de domínio outros:", hasOptions, "Total:", $('#dominio_outros option').length);
-                        
-                        // Forçar a adição dos valores como options se não existirem
-                        if (!hasOptions && dominioOutrosValues.length > 0) {
-                            console.log("Não há opções no select de domínios outros, adicionando os valores manualmente");
-                            dominioOutrosValues.forEach(value => {
-                                $('#dominio_outros').append(new Option(value, value));
-                            });
-                            console.log(`Adicionadas ${dominioOutrosValues.length} opções ao select de domínios outros`);
-                        }
-                        
-                        // Verificar se estamos usando Choices.js
-                        if (window.dominioOutrosChoices) {
-                            try {
-                                // Destruir e recriar o Choices.js para garantir que está atualizado
-                                if (typeof window.dominioOutrosChoices.destroy === 'function') {
-                                    window.dominioOutrosChoices.destroy();
-                                    console.log("Choices.js para domínio outros destruído para recriação");
-                                }
-                                
-                                // Recriar o Choices.js
-                                window.dominioOutrosChoices = new Choices('#dominio_outros', {
-                                    removeItemButton: true,
-                                    searchEnabled: true,
-                                    searchPlaceholderValue: 'Pesquisar domínios afeitos outros...',
-                                    placeholder: true,
-                                    placeholderValue: 'Selecione os domínios afeitos outros',
-                                    noResultsText: 'Nenhum resultado encontrado',
-                                    noChoicesText: 'Nenhuma opção disponível',
-                                    itemSelectText: 'Clique para selecionar',
-                                    classNames: {
-                                        containerOuter: 'choices shadow-sm'
-                                    }
-                                });
-                                
-                                // Adicionar os valores
-                                window.dominioOutrosChoices.setChoiceByValue(dominioOutrosValues);
-                                console.log("Domínios outros definidos via Choices.js recriado");
-                            } catch (e) {
-                                console.error("Erro ao definir domínios outros via Choices.js:", e);
-                                // Fallback para o método tradicional
-                                $('#dominio_outros').val(dominioOutrosValues);
-                                $('#dominio_outros').trigger('change');
-                                console.log("Domínios outros definidos via jQuery (fallback)");
-                            }
-                        } else {
-                            // Fallback para o método tradicional
-                            $('#dominio_outros').val(dominioOutrosValues);
-                            // Forçar o evento change para garantir que os listeners sejam acionados
-                            $('#dominio_outros').trigger('change');
-                            console.log("Domínios outros definidos via jQuery");
-                        }
-                    }
-                }
-            }
-            
-            // Completar a operação
-            if (typeof callback === 'function') {
-                console.log("Aplicação de domínios concluída, chamando callback");
-                callback();
-            }
-        }
-        
-        // Função para aplicar segmento após a microárea estar atualizada
-        function aplicarSegmento() {
-            if (segmento) {
-                console.log("Aplicando segmento:", segmento);
-                
-                // Verificar se o segmento existe nas opções
-                let segmentoExiste = false;
-                $('#segmento option').each(function() {
-                    if ($(this).val() === segmento) {
-                        segmentoExiste = true;
-                        return false; // break
-                    }
-                });
-                
-                if (!segmentoExiste) {
-                    console.log("Segmento não encontrado nas opções, adicionando manualmente:", segmento);
-                    $('#segmento').append(new Option(segmento, segmento));
-                }
-                
-                // Definir o valor do segmento
-                $('#segmento').val(segmento);
-                console.log("Segmento definido para:", segmento);
+            // Aplicar microárea com highlight visual temporário
+            if (microarea) {
+                $('#microarea').val(microarea);
+                console.log("Microárea definida para:", microarea);
                 
                 // Forçar o evento change para garantir que os listeners sejam acionados
-                $('#segmento').trigger('change');
+                $('#microarea').trigger('change');
                 
-                // Chamar a função global atualizarDominios diretamente
-                if (typeof window.atualizarDominios === 'function') {
-                    console.log("Chamando atualizarDominios diretamente com triggeredByUser=false");
-                    window.atualizarDominios(false); // Passar false para indicar que não é uma ação do usuário
-                    console.log("Domínios atualizados após definir segmento");
+                // Chamar a função global filtrarSegmentos diretamente
+                if (typeof window.filtrarSegmentos === 'function') {
+                    console.log("Chamando filtrarSegmentos diretamente com triggeredByUser=false");
+                    window.filtrarSegmentos(false); // Passar false para indicar que não é uma ação do usuário
+                    console.log("Segmentos filtrados após definir microárea");
                     
-                    // Aumentar o delay para garantir que os domínios foram atualizados
-                    setTimeout(aplicarDominios, 1500);
+                    // Aumentar o delay para garantir que os segmentos foram atualizados
+                    setTimeout(() => {
+                        // Aplicar segmento e atualizar domínios
+                        if (segmento) {
+                            $('#segmento').val(segmento);
+                            console.log("Segmento definido para:", segmento);
+                            
+                            // Forçar o evento change para garantir que os listeners sejam acionados
+                            $('#segmento').trigger('change');
+                            
+                            // Chamar a função global atualizarDominios diretamente
+                            if (typeof window.atualizarDominios === 'function') {
+                                console.log("Chamando atualizarDominios diretamente com triggeredByUser=false");
+                                window.atualizarDominios(false); // Passar false para indicar que não é uma ação do usuário
+                                console.log("Domínios atualizados após definir segmento");
+                                
+                                // Aumentar o delay para garantir que os domínios foram atualizados
+                                setTimeout(() => {
+                                    // Aplicar domínios
+                                    if (dominio) {
+                                        let dominioValues = [];
+                                        if (typeof dominio === 'string' && dominio.includes(';')) {
+                                            dominioValues = dominio.split(';').map(d => d.trim());
+                                        } else if (Array.isArray(dominio)) {
+                                            dominioValues = dominio;
+                                        } else {
+                                            dominioValues = [dominio];
+                                        }
+                                        
+                                        console.log("Definindo domínios:", dominioValues);
+                                        
+                                        // Verificar se há opções disponíveis no select
+                                        const hasOptions = $('#dominio option').length > 0;
+                                        
+                                        // Forçar a adição dos valores como options se não existirem
+                                        if (!hasOptions && dominioValues.length > 0) {
+                                            console.log("Não há opções no select de domínio, adicionando os valores manualmente");
+                                            dominioValues.forEach(value => {
+                                                $('#dominio').append(new Option(value, value));
+                                            });
+                                            console.log(`Adicionadas ${dominioValues.length} opções ao select de domínio`);
+                                        }
+                                        
+                                        // Verificar se estamos usando Choices.js
+                                        if (window.dominioChoices) {
+                                            try {
+                                                // Usar a API do Choices.js para definir os valores
+                                                window.dominioChoices.setChoiceByValue(dominioValues);
+                                                console.log("Domínios definidos via Choices.js");
+                                            } catch (e) {
+                                                console.error("Erro ao definir domínios via Choices.js:", e);
+                                                // Fallback para o método tradicional
+                                                $('#dominio').val(dominioValues);
+                                                $('#dominio').trigger('change');
+                                            }
+                                        } else {
+                                            // Fallback para o método tradicional
+                                            $('#dominio').val(dominioValues);
+                                            // Forçar o evento change para garantir que os listeners sejam acionados
+                                            $('#dominio').trigger('change');
+                                            console.log("Domínios definidos via jQuery");
+                                        }
+                                    }
+                                    
+                                    // Aplicar domínios outros
+                                    if (dominio_outros) {
+                                        // Tratar valores N/A ou vazios
+                                        if (dominio_outros === 'N/A' || dominio_outros === '') {
+                                            console.log("Domínios afeitos outros está vazio ou marcado como N/A. Definindo como vazio no formulário.");
+                                            // Limpar o campo de domínios outros
+                                            $('#dominio_outros').val([]);
+                                            
+                                            // Atualizar o select2 para refletir as mudanças
+                                            if ($('#dominio_outros').hasClass('searchable-select')) {
+                                                $('#dominio_outros').trigger('change');
+                                            } else {
+                                                // Forçar o evento change para garantir que os listeners sejam acionados
+                                                $('#dominio_outros').trigger('change');
+                                            }
+                                            
+                                            // Adicionar um atributo de dados para indicar que foi definido como N/A
+                                            $('#dominio_outros').attr('data-na', 'true');
+                                        } else {
+                                            let dominioOutrosValues = [];
+                                            if (typeof dominio_outros === 'string' && dominio_outros.includes(';')) {
+                                                dominioOutrosValues = dominio_outros.split(';').map(d => d.trim());
+                                            } else if (Array.isArray(dominio_outros)) {
+                                                dominioOutrosValues = dominio_outros;
+                                            } else {
+                                                dominioOutrosValues = [dominio_outros];
+                                            }
+                                        
+                                            console.log("Preparando para definir domínios afeitos outros:", dominioOutrosValues);
+                                            
+                                            // Verificar se há opções disponíveis no select
+                                            const hasOptions = $('#dominio_outros option').length > 0;
+                                            
+                                            // Forçar a adição dos valores como options se não existirem
+                                            if (!hasOptions && dominioOutrosValues.length > 0) {
+                                                console.log("Não há opções no select de domínios outros, adicionando os valores manualmente");
+                                                dominioOutrosValues.forEach(value => {
+                                                    $('#dominio_outros').append(new Option(value, value));
+                                                });
+                                                console.log(`Adicionadas ${dominioOutrosValues.length} opções ao select de domínios outros`);
+                                            }
+                                            
+                                            // Aplicar diretamente os valores no select
+                                            if (window.dominioOutrosChoices) {
+                                                try {
+                                                    // Usar a API do Choices.js para definir os valores
+                                                    window.dominioOutrosChoices.setChoiceByValue(dominioOutrosValues);
+                                                    console.log("Domínios outros definidos via Choices.js");
+                                                } catch (e) {
+                                                    console.error("Erro ao definir domínios outros via Choices.js:", e);
+                                                    // Fallback para o método tradicional
+                                                    $('#dominio_outros').val(dominioOutrosValues);
+                                                    $('#dominio_outros').trigger('change');
+                                                }
+                                            } else {
+                                                // Fallback para o método tradicional
+                                                $('#dominio_outros').val(dominioOutrosValues);
+                                                
+                                                // Atualizar o select2 para refletir as mudanças
+                                                if ($('#dominio_outros').hasClass('searchable-select')) {
+                                                    $('#dominio_outros').trigger('change');
+                                                } else {
+                                                    // Forçar o evento change para garantir que os listeners sejam acionados
+                                                    $('#dominio_outros').trigger('change');
+                                                }
+                                                console.log("Domínios outros definidos via jQuery");
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Completar a operação
+                                    if (typeof callback === 'function') callback();
+                                    
+                                }, 1200); // Aumentado de 800ms para 1200ms
+                            } else {
+                                console.error("Função atualizarDominios não encontrada");
+                                // Completar a operação mesmo se houver erro
+                                if (typeof callback === 'function') callback();
+                            }
+                        }
+                    }, 1000); // Aumentado de 800ms para 1000ms
                 } else {
-                    console.error("Função atualizarDominios não encontrada");
-                    // Tentar aplicar domínios mesmo sem a função
-                    setTimeout(aplicarDominios, 1000);
+                    console.error("Função filtrarSegmentos não encontrada");
+                    // Completar a operação mesmo se houver erro
+                    if (typeof callback === 'function') callback();
                 }
             } else {
-                console.log("Nenhum segmento para aplicar");
-                // Tentar aplicar domínios mesmo sem segmento
-                setTimeout(aplicarDominios, 1000);
+                console.log("Nenhuma microárea para aplicar");
+                // Completar a operação se não houver microárea
+                if (typeof callback === 'function') callback();
             }
-        }
-        
-        // Garantir que a flag applyingAiSuggestions esteja definida
-        window.applyingAiSuggestions = true;
-        console.log("Flag applyingAiSuggestions definida como TRUE");
-        
-        // Aplicar microárea
-        if (microarea) {
-            console.log("Aplicando microárea:", microarea);
-            
-            // Verificar se a microárea existe nas opções
-            let microareaExiste = false;
-            $('#microarea option').each(function() {
-                if ($(this).val() === microarea) {
-                    microareaExiste = true;
-                    return false; // break
-                }
-            });
-            
-            if (!microareaExiste) {
-                console.log("Microárea não encontrada nas opções, adicionando manualmente:", microarea);
-                $('#microarea').append(new Option(microarea, microarea));
-            }
-            
-            // Definir o valor da microárea
-            $('#microarea').val(microarea);
-            console.log("Microárea definida para:", microarea);
-            
-            // Forçar o evento change para garantir que os listeners sejam acionados
-            $('#microarea').trigger('change');
-            
-            // Chamar a função global filtrarSegmentos diretamente
-            if (typeof window.filtrarSegmentos === 'function') {
-                console.log("Chamando filtrarSegmentos diretamente com triggeredByUser=false");
-                window.filtrarSegmentos(false); // Passar false para indicar que não é uma ação do usuário
-                console.log("Segmentos filtrados após definir microárea");
-                
-                // Aumentar o delay para garantir que os segmentos foram atualizados
-                setTimeout(aplicarSegmento, 1500);
-            } else {
-                console.error("Função filtrarSegmentos não encontrada");
-                // Tentar aplicar segmento mesmo sem a função
-                setTimeout(aplicarSegmento, 1000);
-            }
-        } else {
-            console.log("Nenhuma microárea para aplicar");
-            // Tentar aplicar segmento mesmo sem microárea
-            setTimeout(aplicarSegmento, 1000);
-        }
+        }, 300); // Reduzido de 1000ms para 300ms
     }
     
     /**
@@ -1013,27 +922,15 @@ $(document).ready(function() {
                 // Esconder o overlay se estiver ativo por mais de 3 segundos (segurança)
                 setTimeout(function() {
                     console.log("Verificação final: escondendo overlay de carregamento se ainda estiver visível");
-                    if (typeof aiLoading !== 'undefined') {
-                        aiLoading.forceCleanup();
-                        
-                        // Garantir que o localStorage também seja limpo
-                        localStorage.removeItem('aiLoadingActive');
-                        localStorage.removeItem('aiLoadingMessage');
-                        localStorage.removeItem('aiLoadingSubmessage');
-                    }
+                    aiLoading.completeProgress();
                 }, 3000);
             }
         });
     } else {
         // Se não estamos na página de categorização, garantir que o overlay seja escondido
-        if (typeof aiLoading !== 'undefined') {
+        if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
             console.log('Não estamos na página de categorização, escondendo o overlay de carregamento');
-            aiLoading.forceCleanup();
-            
-            // Garantir que o localStorage também seja limpo
-            localStorage.removeItem('aiLoadingActive');
-            localStorage.removeItem('aiLoadingMessage');
-            localStorage.removeItem('aiLoadingSubmessage');
+            aiLoading.completeProgress();
         }
     }
     

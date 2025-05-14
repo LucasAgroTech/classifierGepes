@@ -321,37 +321,6 @@
         background-color: #198754 !important;
         color: white;
     }
-    
-    /* Estilos para paginação */
-    .pagination-container {
-        margin-top: 1.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .pagination .page-link {
-        color: var(--primary-dark);
-        border-color: var(--input-border);
-        background-color: var(--input-bg);
-        transition: all 0.2s ease;
-    }
-    
-    .pagination .page-item.active .page-link {
-        background-color: var(--primary-dark);
-        border-color: var(--primary-dark);
-        color: white;
-    }
-    
-    .pagination .page-link:hover {
-        background-color: var(--primary-bg-light);
-        border-color: var(--primary-color);
-        color: var(--primary-color);
-    }
-    
-    .pagination .page-item.disabled .page-link {
-        color: var(--text-muted);
-        background-color: var(--input-bg);
-        border-color: var(--input-border);
-    }
 </style>
 {% endblock %}
 
@@ -542,64 +511,6 @@
         </table>
     </div>
 </div>
-
-<!-- Adicionar controles de paginação -->
-{% if pagination and pagination.pages > 1 %}
-<div class="pagination-container mt-4 d-flex justify-content-center">
-    <nav aria-label="Navegação de páginas">
-        <ul class="pagination">
-            <!-- Botão Anterior -->
-            {% if pagination.has_prev %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('main.projects', page=pagination.prev_num) }}" aria-label="Anterior">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Anterior">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
-            {% endif %}
-            
-            <!-- Páginas -->
-            {% for page_num in pagination.iter_pages(left_edge=2, left_current=2, right_current=3, right_edge=2) %}
-                {% if page_num %}
-                    {% if page_num == pagination.page %}
-                    <li class="page-item active">
-                        <a class="page-link" href="{{ url_for('main.projects', page=page_num) }}">{{ page_num }}</a>
-                    </li>
-                    {% else %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url_for('main.projects', page=page_num) }}">{{ page_num }}</a>
-                    </li>
-                    {% endif %}
-                {% else %}
-                <li class="page-item disabled">
-                    <a class="page-link" href="#">...</a>
-                </li>
-                {% endif %}
-            {% endfor %}
-            
-            <!-- Botão Próximo -->
-            {% if pagination.has_next %}
-            <li class="page-item">
-                <a class="page-link" href="{{ url_for('main.projects', page=pagination.next_num) }}" aria-label="Próximo">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled">
-                <a class="page-link" href="#" aria-label="Próximo">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-            {% endif %}
-        </ul>
-    </nav>
-</div>
-{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -651,26 +562,15 @@
             $(this).text(formatarDataBrasileira(timestamp));
         });
         
-        // Limpar o localStorage relacionado ao overlay de carregamento imediatamente ao carregar a página de projetos
+        // Limpar o localStorage relacionado ao overlay de carregamento ao carregar a página de projetos
         localStorage.removeItem('aiLoadingActive');
         localStorage.removeItem('aiLoadingMessage');
         localStorage.removeItem('aiLoadingSubmessage');
         
         // Esconder o overlay de carregamento se estiver visível
         if (typeof aiLoading !== 'undefined') {
-            aiLoading.completeProgress(); // Usar completeProgress em vez de hide para garantir limpeza completa
+            aiLoading.hide();
         }
-        
-        // Adicionar um segundo mecanismo de segurança para garantir que o overlay seja escondido
-        setTimeout(function() {
-            if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
-                console.log('Forçando remoção do overlay de carregamento (mecanismo de segurança)');
-                localStorage.removeItem('aiLoadingActive');
-                localStorage.removeItem('aiLoadingMessage');
-                localStorage.removeItem('aiLoadingSubmessage');
-                aiLoading.completeProgress();
-            }
-        }, 1000);
         
         // Adicionar atributo data-categorizado às linhas
         $(".clickable-row").each(function() {
@@ -812,75 +712,6 @@
             }
         });
         
-        // Modificar os links de paginação para preservar os filtros
-        function updatePaginationLinks() {
-            // Obter valores dos filtros atuais
-            var searchValue = $("#searchInput").val();
-            var categoryFilter = $("#categoryFilter").val();
-            
-            // Atualizar todos os links de paginação para incluir os parâmetros de filtro
-            $(".pagination .page-link").each(function() {
-                var link = $(this);
-                var href = link.attr("href");
-                
-                // Ignorar links desabilitados
-                if (href === "#" || !href) {
-                    return;
-                }
-                
-                // Adicionar parâmetros de filtro ao link
-                var newHref = href;
-                
-                // Adicionar parâmetro de busca se existir
-                if (searchValue) {
-                    // Verificar se já tem parâmetros
-                    newHref += (newHref.includes('?') ? '&' : '?') + 'search=' + encodeURIComponent(searchValue);
-                }
-                
-                // Adicionar parâmetro de filtro de categoria se não for "all"
-                if (categoryFilter && categoryFilter !== "all") {
-                    newHref += (newHref.includes('?') ? '&' : '?') + 'filter=' + encodeURIComponent(categoryFilter);
-                }
-                
-                // Atualizar o href do link
-                link.attr("href", newHref);
-            });
-        }
-        
-        // Verificar se há parâmetros de filtro na URL e aplicá-los
-        function applyUrlFilters() {
-            // Obter parâmetros da URL
-            var urlParams = new URLSearchParams(window.location.search);
-            var searchParam = urlParams.get('search');
-            var filterParam = urlParams.get('filter');
-            
-            // Aplicar filtro de busca se existir
-            if (searchParam) {
-                $("#searchInput").val(searchParam);
-            }
-            
-            // Aplicar filtro de categoria se existir
-            if (filterParam) {
-                $("#categoryFilter").val(filterParam);
-            }
-            
-            // Aplicar os filtros
-            if (searchParam || filterParam) {
-                applyFilters();
-            }
-        }
-        
-        // Chamar a função para aplicar filtros da URL ao carregar a página
-        applyUrlFilters();
-        
-        // Atualizar links de paginação quando os filtros mudarem
-        $("#searchInput, #categoryFilter").on("change keyup", function() {
-            updatePaginationLinks();
-        });
-        
-        // Atualizar links de paginação na inicialização
-        updatePaginationLinks();
-        
         // Função para tornar as linhas clicáveis (modificado para ignorar a primeira coluna)
         $(".clickable-row").click(function(e) {
             // Se o clique foi na primeira coluna, não redirecionar
@@ -894,11 +725,6 @@
             
             // Mostrar o overlay de carregamento antes de redirecionar
             if (typeof aiLoading !== 'undefined') {
-                // Limpar qualquer estado anterior do overlay
-                localStorage.removeItem('aiLoadingActive');
-                localStorage.removeItem('aiLoadingMessage');
-                localStorage.removeItem('aiLoadingSubmessage');
-                
                 if (isHumanValidated) {
                     // Mensagem para projetos validados por humano
                     aiLoading.show(
@@ -918,13 +744,6 @@
                         "Aguarde enquanto a IA analisa e prepara as sugestões de classificação"
                     );
                 }
-                
-                // Adicionar um timeout de segurança para garantir que o overlay não fique preso
-                setTimeout(function() {
-                    localStorage.removeItem('aiLoadingActive');
-                    localStorage.removeItem('aiLoadingMessage');
-                    localStorage.removeItem('aiLoadingSubmessage');
-                }, 10000); // 10 segundos de timeout
             }
             
             // Redirecionar após um pequeno delay para garantir que o overlay seja exibido

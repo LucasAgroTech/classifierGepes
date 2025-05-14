@@ -1,12 +1,166 @@
 from openai import OpenAI
 import json
+import logging
 from datetime import datetime
-from app.models import AISuggestion, db
+from app.models import AISuggestion, CategoriaLista, db
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class OpenAIClient:
     def __init__(self, api_key):
         self.api_key = api_key
         self.client = OpenAI(api_key=api_key)
+    
+    def _get_categories_lists(self):
+        """Obtém as listas de categorias do banco de dados."""
+        organized_lists = {}
+        
+        # Obter todas as categorias ativas
+        all_categories = CategoriaLista.query.filter_by(ativo=True).all()
+        
+        # Inicializar listas vazias para cada tipo
+        for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
+            organized_lists[tipo] = []
+        
+        # Mapeamento de tipos para consulta no banco de dados
+        tipo_mapping = {
+            'microarea': 'macroárea',
+            'segmento': 'segmento',
+            'dominio': 'dominio'
+        }
+        
+        # Estrutura para armazenar domínios por microárea e segmento
+        dominios_por_microarea_segmento = {}
+        
+        # Processar cada categoria
+        for categoria in all_categories:
+            tipo = categoria.tipo
+            valor = categoria.valor
+            
+            # Mapear o tipo do banco de dados para o tipo usado na interface
+            if tipo in tipo_mapping.values():
+                # Encontrar a chave correspondente ao valor
+                for ui_tipo, db_tipo in tipo_mapping.items():
+                    if db_tipo == tipo:
+                        # Adicionar à lista correspondente
+                        if valor not in organized_lists[ui_tipo]:
+                            organized_lists[ui_tipo].append(valor)
+                        break
+            elif tipo in organized_lists:
+                # Para outros tipos que não estão no mapeamento
+                if valor not in organized_lists[tipo]:
+                    organized_lists[tipo].append(valor)
+            
+            # Processar categorias para a estrutura hierárquica
+            if tipo == 'macroárea':
+                # Macroárea é adicionada diretamente
+                if valor not in organized_lists['microarea']:
+                    organized_lists['microarea'].append(valor)
+                
+                # Inicializar a estrutura para esta macroárea
+                if valor not in dominios_por_microarea_segmento:
+                    dominios_por_microarea_segmento[valor] = {}
+            
+            elif tipo == 'segmento':
+                # Segmento está no formato "Macroárea|Segmento"
+                if '|' in valor:
+                    parts = valor.split('|')
+                    if len(parts) >= 2:
+                        macroárea = parts[0]
+                        segmento = parts[1]
+                        
+                        # Adicionar à lista de segmentos
+                        if segmento not in organized_lists['segmento']:
+                            organized_lists['segmento'].append(segmento)
+                        
+                        # Adicionar à estrutura hierárquica
+                        if macroárea not in dominios_por_microarea_segmento:
+                            dominios_por_microarea_segmento[macroárea] = {}
+                        
+                        if segmento not in dominios_por_microarea_segmento[macroárea]:
+                            dominios_por_microarea_segmento[macroárea][segmento] = []
+            
+            elif tipo == 'dominio':
+                # Domínio está no formato "Macroárea|Segmento|Domínio"
+                if '|' in valor:
+                    parts = valor.split('|')
+                    if len(parts) >= 3:
+                        macroárea = parts[0]
+                        segmento = parts[1]
+                        dominio = parts[2]
+                        
+                        # Adicionar à lista de domínios
+                        if dominio not in organized_lists['dominio']:
+                            organized_lists['dominio'].append(dominio)
+                        
+                        # Adicionar à estrutura hierárquica
+                        if macroárea not in dominios_por_microarea_segmento:
+                            dominios_por_microarea_segmento[macroárea] = {}
+                        
+                        if segmento not in dominios_por_microarea_segmento[macroárea]:
+                            dominios_por_microarea_segmento[macroárea][segmento] = []
+                        
+                        if dominio not in dominios_por_microarea_segmento[macroárea][segmento]:
+                            dominios_por_microarea_segmento[macroárea][segmento].append(dominio)
+        
+        # Adicionar a estrutura hierárquica ao resultado
+        organized_lists['dominios_por_microarea_segmento'] = dominios_por_microarea_segmento
+        
+        return organized_lists
+    
+    def _get_tecverde_classes(self):
+        """Obtém as classes de tecnologias verdes do banco de dados."""
+        # Buscar classes de tecnologias verdes no banco de dados
+        # Por enquanto, usamos dados predefinidos para exemplo
+        tecverde_classes = {
+            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+            "Conservação": "Tecnologias para conservação de recursos naturais",
+            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+        }
+        
+        return tecverde_classes
+    
+    def _get_tecverde_subclasses(self):
+        """Obtém as subclasses de tecnologias verdes do banco de dados."""
+        # Buscar subclasses de tecnologias verdes no banco de dados
+        # Por enquanto, usamos dados predefinidos para exemplo
+        tecverde_subclasses = {
+            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+        }
+        
+        return tecverde_subclasses
+    
+    def _get_aia_data_from_db(self):
+        """
+        Obtém os dados de AIA (Áreas de Interesse Aplicado) do banco de dados.
+        
+        Returns:
+            Lista de dicionários com as categorias do AIA
+        """
+        categories_lists = self._get_categories_lists()
+        dominios_por_microarea_segmento = categories_lists.get('dominios_por_microarea_segmento', {})
+        
+        aia_data = []
+        
+        # Converter a estrutura hierárquica para o formato esperado pelo método _build_prompt_etapa1
+        for macroarea, segmentos in dominios_por_microarea_segmento.items():
+            for segmento, dominios in segmentos.items():
+                dominios_str = "; ".join(dominios) if dominios else ""
+                aia_data.append({
+                    "Macroárea": macroarea,
+                    "Segmento": segmento,
+                    "Domínios Afeitos": dominios_str
+                })
+        
+        return aia_data
     
     def suggest_categories(self, project, categories_lists=None, aia_data=None):
         """
@@ -25,14 +179,21 @@ class OpenAIClient:
         Returns:
             Dicionário com as categorias sugeridas e informações adicionais
         """
+        logger.info(f"Iniciando classificação do projeto ID: {project.get('id')}, Título: {project.get('titulo', '')}")
         if not self.api_key:
             return {
                 "error": "Chave da API OpenAI não configurada"
             }
         
         try:
+            # Se não foi fornecido aia_data, obter do banco de dados
+            if not aia_data:
+                aia_data = self._get_aia_data_from_db()
+                
             # ETAPA 1: Identificar Micro Área, Segmento e Domínio
             prompt_etapa1 = self._build_prompt_etapa1(project, aia_data)
+            logger.info(f"Etapa 1 - Enviando prompt para OpenAI (projeto ID: {project.get('id')})")
+            logger.debug(f"Prompt Etapa 1: {prompt_etapa1[:200]}...")
             
             # Chamar a API do ChatGPT para a primeira etapa
             response_etapa1 = self.client.chat.completions.create(
@@ -47,6 +208,9 @@ class OpenAIClient:
             
             # Extrair a resposta da primeira etapa
             ai_response_etapa1 = response_etapa1.choices[0].message.content.strip()
+            logger.info(f"Etapa 1 - Resposta recebida da OpenAI (projeto ID: {project.get('id')})")
+            logger.info(f"Resposta bruta da API (Etapa 1): {ai_response_etapa1}")
+            logger.debug(f"Resposta completa da API (Etapa 1): {response_etapa1}")
             
             # Processar a resposta da primeira etapa
             try:
@@ -80,6 +244,8 @@ class OpenAIClient:
                 
                 # Construir o prompt para a segunda etapa (só será executado se houver domínios afeitos outros)
                 prompt_etapa2 = self._build_prompt_etapa2(project, result_etapa1, dominios_afeitos_outros)
+                logger.info(f"Etapa 2 - Enviando prompt para OpenAI (projeto ID: {project.get('id')})")
+                logger.debug(f"Prompt Etapa 2: {prompt_etapa2[:200]}...")
                 
                 # Chamar a API do ChatGPT para a segunda etapa
                 response_etapa2 = self.client.chat.completions.create(
@@ -94,6 +260,9 @@ class OpenAIClient:
                 
                 # Extrair a resposta da segunda etapa
                 ai_response_etapa2 = response_etapa2.choices[0].message.content.strip()
+                logger.info(f"Etapa 2 - Resposta recebida da OpenAI (projeto ID: {project.get('id')})")
+                logger.info(f"Resposta bruta da API (Etapa 2): {ai_response_etapa2}")
+                logger.debug(f"Resposta completa da API (Etapa 2): {response_etapa2}")
                 
                 # Processar a resposta da segunda etapa
                 result_etapa2 = self._parse_ai_response(ai_response_etapa2)
@@ -106,29 +275,13 @@ class OpenAIClient:
                 # ETAPA 3: Classificar Tecnologias Verdes
                 try:
                     # Carregar dados de tecnologias verdes do banco de dados
-                    tecverde_classes = {}
-                    tecverde_subclasses = {}
-                    
-                    # Aqui você teria que modificar para carregar do banco de dados
-                    # Por enquanto, usamos dados predefinidos para exemplo
-                    tecverde_classes = {
-                        "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
-                        "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
-                        "Transporte": "Tecnologias de transporte com menor impacto ambiental",
-                        "Conservação": "Tecnologias para conservação de recursos naturais",
-                        "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
-                    }
-                    
-                    tecverde_subclasses = {
-                        "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
-                        "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
-                        "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
-                        "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
-                        "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
-                    }
+                    tecverde_classes = self._get_tecverde_classes()
+                    tecverde_subclasses = self._get_tecverde_subclasses()
                     
                     # Construir o prompt para a terceira etapa
                     prompt_etapa3 = self._build_prompt_etapa3(project, tecverde_classes, tecverde_subclasses)
+                    logger.info(f"Etapa 3 - Enviando prompt para OpenAI (projeto ID: {project.get('id')})")
+                    logger.debug(f"Prompt Etapa 3: {prompt_etapa3[:200]}...")
                     
                     # Chamar a API do ChatGPT para a terceira etapa
                     response_etapa3 = self.client.chat.completions.create(
@@ -143,6 +296,9 @@ class OpenAIClient:
                     
                     # Extrair a resposta da terceira etapa
                     ai_response_etapa3 = response_etapa3.choices[0].message.content.strip()
+                    logger.info(f"Etapa 3 - Resposta recebida da OpenAI (projeto ID: {project.get('id')})")
+                    logger.info(f"Resposta bruta da API (Etapa 3): {ai_response_etapa3}")
+                    logger.debug(f"Resposta completa da API (Etapa 3): {response_etapa3}")
                     
                     # Processar a resposta da terceira etapa
                     result_etapa3 = self._parse_ai_response(ai_response_etapa3)
@@ -206,12 +362,15 @@ class OpenAIClient:
             project_id: ID do projeto
             suggestion_data: Dados da sugestão
         """
+        logger.info(f"Salvando sugestão no banco de dados para o projeto ID: {project_id}")
+        logger.info(f"Estrutura dos dados da sugestão: {json.dumps(suggestion_data, indent=2, ensure_ascii=False)}")
         try:
             # Verificar se já existe uma sugestão para este projeto
             suggestion = AISuggestion.query.filter_by(id_projeto=project_id).first()
             
             if suggestion:
                 # Atualizar sugestão existente
+                logger.info(f"Atualizando sugestão existente para o projeto ID: {project_id}")
                 suggestion.microarea = suggestion_data.get('_aia_n1_macroarea', '')
                 suggestion.segmento = suggestion_data.get('_aia_n2_segmento', '')
                 suggestion.dominio = suggestion_data.get('_aia_n3_dominio_afeito', '')
@@ -350,11 +509,14 @@ Não adicione explicações fora do JSON.
         Returns:
             Dicionário com os dados extraídos ou objeto de erro
         """
+        logger.info("Analisando resposta da IA para extrair JSON")
         try:
             # Tentar analisar como JSON diretamente
             result = json.loads(ai_response)
+            logger.info("Resposta da IA analisada com sucesso como JSON")
             return result
         except json.JSONDecodeError:
+            logger.warning("Falha ao analisar resposta como JSON diretamente, tentando extrair parte JSON")
             # Tentar extrair apenas a parte JSON da resposta
             start_idx = ai_response.find('{')
             end_idx = ai_response.rfind('}') + 1
@@ -363,12 +525,15 @@ Não adicione explicações fora do JSON.
                 json_str = ai_response[start_idx:end_idx]
                 try:
                     result = json.loads(json_str)
+                    logger.info("JSON extraído com sucesso da resposta da IA")
                     return result
-                except:
-                    pass
+                except Exception as e:
+                    logger.error(f"Falha ao analisar JSON extraído: {str(e)}")
+            else:
+                logger.error("Não foi possível encontrar estrutura JSON na resposta da IA")
             
             # Retornar um objeto de erro se não conseguir extrair como JSON
-            return {
+            error_result = {
                 "_aia_n1_macroarea": "",
                 "_aia_n2_segmento": "",
                 "_aia_n3_dominio_afeito": "",
@@ -377,6 +542,8 @@ Não adicione explicações fora do JSON.
                 "justificativa": "Não foi possível processar a resposta da IA como JSON",
                 "error": "Não foi possível processar a resposta da IA como JSON"
             }
+            logger.error(f"Retornando objeto de erro: {error_result}")
+            return error_result
     
     def _get_dominios_afeitos_outros(self, macroarea, segmento, aia_data):
         """
