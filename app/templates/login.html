@@ -270,19 +270,25 @@
             {% endif %}
             
             <form method="POST" action="{{ url_for('main.login') }}">
+                {{ form.csrf_token }}
                 {% if is_system_session %}
                 <input type="hidden" name="session_type" value="sistema">
                 {% endif %}
                 <div class="form-floating mb-4">
-                    <input type="email" class="form-control" id="username" name="username" required 
+                    <input type="email" class="form-control" id="email" name="email" required 
                            placeholder="Usuário">
-                    <label for="username"><i class="fas fa-envelope me-2"></i>Usuário</label>
+                    <label for="email"><i class="fas fa-envelope me-2"></i>Usuário</label>
                 </div>
                 
                 <div class="form-floating mb-4">
                     <input type="password" class="form-control" id="password" name="password" required
                            placeholder="Senha">
                     <label for="password"><i class="fas fa-lock me-2"></i>Senha</label>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                    <label class="form-check-label" for="remember_me">Lembrar-me</label>
                 </div>
                 
                 <div class="d-grid mt-4">

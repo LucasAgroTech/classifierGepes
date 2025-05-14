@@ -13,11 +13,11 @@ class Usuario(UserMixin, db.Model):
     __table_args__ = {'schema': 'gepes'}
     
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), nullable=False, unique=True)
-    nome = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='user')
-    sharepoint_username = db.Column(db.String(255))
-    senha_hash = db.Column(db.String(255))
+    email = db.Column(db.Text, nullable=False, unique=True)
+    nome = db.Column(db.Text, nullable=False)
+    role = db.Column(db.Text, nullable=False, default='user')
+    sharepoint_username = db.Column(db.Text)
+    senha_hash = db.Column(db.Text)
     ultima_atualizacao = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relações
@@ -38,46 +38,81 @@ class Projeto(db.Model):
     __table_args__ = {'schema': 'gepes'}
     
     id = db.Column(db.Integer, primary_key=True)
-    codigo_projeto = db.Column(db.String(50), nullable=False, unique=True)
-    codigo_interno = db.Column(db.String(50))
-    unidade_embrapii = db.Column(db.String(255))
-    tipo_projeto = db.Column(db.String(100))
-    status = db.Column(db.String(50))
+    codigo_projeto = db.Column(db.Text, nullable=False, unique=True)
+    codigo_interno = db.Column(db.Text)
+    unidade_embrapii = db.Column(db.Text)
+    tipo_projeto = db.Column(db.Text)
+    status = db.Column(db.Text)
     titulo = db.Column(db.Text, nullable=False)
     titulo_publico = db.Column(db.Text)
     objetivo = db.Column(db.Text)
     descricao_publica = db.Column(db.Text)
-    data_contrato = db.Column(db.Date)
-    data_avaliacao = db.Column(db.Date)
+    data_contrato = db.Column(db.BigInteger)  # Timestamp em milissegundos
+    data_inicio = db.Column(db.BigInteger)    # Timestamp em milissegundos
+    data_termino = db.Column(db.BigInteger)   # Timestamp em milissegundos
+    data_avaliacao = db.Column(db.BigInteger, nullable=True)  # Timestamp em milissegundos
+    nota_avaliacao = db.Column(db.Numeric(5, 2), nullable=True)
     observacoes = db.Column(db.Text)
     tags = db.Column(db.Text)
-    valor_total = db.Column(db.Numeric(15, 2))
-    perc_valor_embrapii = db.Column(db.Numeric(5, 2))
-    perc_valor_empresa_sebrae = db.Column(db.Numeric(5, 2))
-    perc_valor_unidade_embrapii = db.Column(db.Numeric(5, 2))
-    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
-    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    # Campos de categorização (que eram armazenados em all_projetos.json)
-    _aia_n1_macroarea = db.Column(db.String(255))
-    _aia_n2_segmento = db.Column(db.String(255))
+    # Campos específicos do formato JSON
+    parceria_programa = db.Column(db.Text)
+    call = db.Column(db.Text)
+    cooperacao_internacional = db.Column(db.Text, nullable=True)
+    modalidade_financiamento = db.Column(db.Text)
+    uso_recurso_obrigatorio = db.Column(db.Text)
+    tecnologia_habilitadora = db.Column(db.Text)
+    missoes_cndi = db.Column(db.Text)
+    area_aplicacao = db.Column(db.Text)
+    projeto = db.Column(db.Text)
+    trl_inicial = db.Column(db.Text)
+    trl_final = db.Column(db.Text)
+    valor_embrapii = db.Column(db.Numeric(15, 2))
+    valor_empresa = db.Column(db.Numeric(15, 2))
+    valor_unidade_embrapii = db.Column(db.Numeric(15, 2))
+    data_extracao_dados = db.Column(db.BigInteger)  # Timestamp em milissegundos
+    brasil_mais_produtivo = db.Column(db.Text)
+    valor_sebrae = db.Column(db.Numeric(15, 2))
+    codigo_negociacao = db.Column(db.Text)
+    macroentregas = db.Column(db.Integer)
+    pct_aceites = db.Column(db.Numeric(5, 2))
+    
+    # Campos calculados
+    _fonte_recurso = db.Column(db.Text)
+    _sebrae = db.Column(db.Text)
+    _valor_total = db.Column(db.Numeric(15, 2))
+    _perc_valor_embrapii = db.Column(db.Numeric(15, 10))
+    _perc_valor_empresa = db.Column(db.Numeric(15, 10))
+    _perc_valor_sebrae = db.Column(db.Numeric(15, 10))
+    _perc_valor_unidade_embrapii = db.Column(db.Numeric(15, 10))
+    _perc_valor_empresa_sebrae = db.Column(db.Numeric(15, 10))
+    
+    # Campos de categorização
+    _aia_n1_macroarea = db.Column(db.Text)
+    _aia_n2_segmento = db.Column(db.Text)
     _aia_n3_dominio_afeito = db.Column(db.Text)
     _aia_n3_dominio_outro = db.Column(db.Text)
+    
+    # Campos internos mantidos
     tecverde_se_aplica = db.Column(db.Boolean)
-    tecverde_classe = db.Column(db.String(255))
-    tecverde_subclasse = db.Column(db.String(255))
+    tecverde_classe = db.Column(db.Text)
+    tecverde_subclasse = db.Column(db.Text)
     tecverde_observacoes = db.Column(db.Text)
     
     # Campos para avaliações da IA
     ai_rating_aia = db.Column(db.Integer)
-    ai_rating_aia_user = db.Column(db.String(255))
-    ai_rating_aia_timestamp = db.Column(db.String(50))
+    ai_rating_aia_user = db.Column(db.Text)
+    ai_rating_aia_timestamp = db.Column(db.Text)
     ai_rating_aia_observacoes = db.Column(db.Text)
     
     ai_rating_tecverde = db.Column(db.Integer)
-    ai_rating_tecverde_user = db.Column(db.String(255))
-    ai_rating_tecverde_timestamp = db.Column(db.String(50))
+    ai_rating_tecverde_user = db.Column(db.Text)
+    ai_rating_tecverde_timestamp = db.Column(db.Text)
     ai_rating_tecverde_observacoes = db.Column(db.Text)
+    
+    # Campos de controle
+    data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
+    data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relações
     categoria = db.relationship('Categoria', backref='projeto', uselist=False, cascade="all, delete-orphan")
@@ -96,8 +131,8 @@ class Categoria(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
-    microarea = db.Column(db.String(255))
-    segmento = db.Column(db.String(255))
+    microarea = db.Column(db.Text)
+    segmento = db.Column(db.Text)
     dominio = db.Column(db.Text)
     dominio_outros = db.Column(db.Text)
     observacoes = db.Column(db.Text)
@@ -113,10 +148,10 @@ class TecnologiaVerde(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
     se_aplica = db.Column(db.Boolean, nullable=False, default=False)
-    classe = db.Column(db.String(255))
-    subclasse = db.Column(db.String(255))
+    classe = db.Column(db.Text)
+    subclasse = db.Column(db.Text)
     observacoes = db.Column(db.Text)
-    confianca = db.Column(db.String(20))
+    confianca = db.Column(db.Text)
     justificativa = db.Column(db.Text)
     data_atualizacao = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -128,8 +163,8 @@ class CategoriaLista(db.Model):
     __table_args__ = {'schema': 'gepes'}
     
     id = db.Column(db.Integer, primary_key=True)
-    tipo = db.Column(db.String(50), nullable=False)
-    valor = db.Column(db.String(255), nullable=False)
+    tipo = db.Column(db.Text, nullable=False)
+    valor = db.Column(db.Text, nullable=False)
     ativo = db.Column(db.Boolean, default=True)
     
     __table_args__ = (
@@ -146,8 +181,8 @@ class ClassificacaoAdicional(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
-    microarea = db.Column(db.String(255), nullable=False)
-    segmento = db.Column(db.String(255), nullable=False)
+    microarea = db.Column(db.Text, nullable=False)
+    segmento = db.Column(db.Text, nullable=False)
     ordem = db.Column(db.Integer, nullable=False)
     data_criacao = db.Column(db.DateTime, default=datetime.utcnow)
     
@@ -161,9 +196,9 @@ class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
     id_usuario = db.Column(db.Integer, db.ForeignKey('gepes.usuarios.id'))
-    email_usuario = db.Column(db.String(255), nullable=False)
-    nome_usuario = db.Column(db.String(255))
-    acao = db.Column(db.String(100), nullable=False)
+    email_usuario = db.Column(db.Text, nullable=False)
+    nome_usuario = db.Column(db.Text)
+    acao = db.Column(db.Text, nullable=False)
     descricao = db.Column(db.Text)
     data_acao = db.Column(db.DateTime, default=datetime.utcnow)
     utilizou_ia = db.Column(db.Boolean, default=False)
@@ -180,22 +215,22 @@ class AISuggestion(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
-    microarea = db.Column(db.String(255))
-    segmento = db.Column(db.String(255))
+    microarea = db.Column(db.Text)
+    segmento = db.Column(db.Text)
     dominio = db.Column(db.Text)
     dominio_outro = db.Column(db.Text)
-    confianca = db.Column(db.String(20))
+    confianca = db.Column(db.Text)
     justificativa = db.Column(db.Text)
     tecverde_se_aplica = db.Column(db.Boolean)
-    tecverde_classe = db.Column(db.String(255))
-    tecverde_subclasse = db.Column(db.String(255))
-    tecverde_confianca = db.Column(db.String(20))
+    tecverde_classe = db.Column(db.Text)
+    tecverde_subclasse = db.Column(db.Text)
+    tecverde_confianca = db.Column(db.Text)
     tecverde_justificativa = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Colunas correspondentes ao JSON da API OpenAI
-    _aia_n1_macroarea = db.Column(db.String(255))
-    _aia_n2_segmento = db.Column(db.String(255))
+    _aia_n1_macroarea = db.Column(db.Text)
+    _aia_n2_segmento = db.Column(db.Text)
     _aia_n3_dominio_afeito = db.Column(db.Text)
     _aia_n3_dominio_outro = db.Column(db.Text)
     
@@ -233,9 +268,9 @@ class AIRating(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
     id_usuario = db.Column(db.Integer, db.ForeignKey('gepes.usuarios.id'))
-    user_id = db.Column(db.String(255), nullable=False)  # Email do usuário (para compatibilidade)
-    nome_usuario = db.Column(db.String(255))
-    tipo = db.Column(db.String(20), nullable=False)  # 'aia' ou 'tecverde'
+    user_id = db.Column(db.Text, nullable=False)  # Email do usuário (para compatibilidade)
+    nome_usuario = db.Column(db.Text)
+    tipo = db.Column(db.Text, nullable=False)  # 'aia' ou 'tecverde'
     rating = db.Column(db.Integer, nullable=False)
     observacoes = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)

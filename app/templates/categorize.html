@@ -558,6 +558,14 @@
                                     </div>
                                     <div class="multiselect-container">
                                         <select class="form-select custom-select shadow-sm choices-select" id="dominio" name="dominio" multiple>
+                                            {% if categories_lists.dominios_por_microarea_segmento_json %}
+                                                {% set dominios_data = categories_lists.dominios_por_microarea_segmento_json|tojson|safe %}
+                                                <script>
+                                                    // Inicializar variável global para os domínios
+                                                    window.dominiosPorMicroareaSegmento = JSON.parse('{{ dominios_data }}');
+                                                    console.log("Dados de domínios carregados:", window.dominiosPorMicroareaSegmento);
+                                                </script>
+                                            {% endif %}
                                             <!-- Preenchido via JavaScript -->
                                         </select>
                                     </div>
@@ -912,12 +920,34 @@
         aiLoadingOverlay.classList.add('category-form-overlay');
         
         console.log('Overlay posicionado sobre o card de classificação');
+        
+        // Esconder o overlay após um breve delay para garantir que a página foi carregada
+        setTimeout(function() {
+            if (typeof aiLoading !== 'undefined') {
+                console.log('Completando o progresso do overlay após carregamento da página de categorização');
+                aiLoading.completeProgress();
+            }
+        }, 1000);
     }
     
     // Executar quando o DOM estiver carregado
     document.addEventListener('DOMContentLoaded', function() {
+        // Limpar imediatamente o localStorage para evitar problemas de carregamento infinito
+        console.log('Página de categorização carregada, limpando estado do overlay');
+        localStorage.removeItem('aiLoadingActive');
+        localStorage.removeItem('aiLoadingMessage');
+        localStorage.removeItem('aiLoadingSubmessage');
+        
         // Aguardar um pequeno delay para garantir que todos os elementos estejam renderizados
         setTimeout(positionOverlayOnCategoryForm, 100);
+        
+        // Adicionar um mecanismo de segurança para garantir que o overlay seja escondido
+        setTimeout(function() {
+            if (typeof aiLoading !== 'undefined' && localStorage.getItem('aiLoadingActive') === 'true') {
+                console.log('Forçando remoção do overlay de carregamento (mecanismo de segurança)');
+                aiLoading.forceCleanup();
+            }
+        }, 2000);
     });
 </script>
 
@@ -1273,9 +1303,18 @@
             }
         });
         
-        // Dados de domínios organizados por microárea e segmento
-        var dominiosPorMicroareaSegmento = JSON.parse('{{ categories_lists.dominios_por_microarea_segmento_json|safe }}');
-        console.log("Dados carregados:", dominiosPorMicroareaSegmento);
+        // Verificar se os dados de domínios já foram carregados globalmente
+        if (!window.dominiosPorMicroareaSegmento) {
+            // Se não foram carregados, tentar carregar aqui
+            try {
+                var dominiosData = '{{ categories_lists.dominios_por_microarea_segmento_json|safe }}';
+                window.dominiosPorMicroareaSegmento = JSON.parse(dominiosData);
+                console.log("Dados de domínios carregados no script principal:", window.dominiosPorMicroareaSegmento);
+            } catch (e) {
+                console.error("Erro ao carregar dados de domínios:", e);
+                window.dominiosPorMicroareaSegmento = {};
+            }
+        }
         
         // Armazenar todas as opções de segmento originais
         var todasOpcoesSegmento = [];
@@ -1370,6 +1409,12 @@
             var segmento = $('#segmento').val();
             console.log("Atualizando domínios para microárea:", microarea, "e segmento:", segmento, "| Gatilho do usuário:", triggeredByUser);
             
+            // Verificar se temos os dados de domínios
+            if (!window.dominiosPorMicroareaSegmento) {
+                console.error("Dados de domínios não disponíveis!");
+                return;
+            }
+            
             // Destruir instâncias existentes de Choices.js antes de limpar os selects
             if (dominioChoices) {
                 dominioChoices.destroy();
@@ -1397,62 +1442,75 @@
                 console.log("Selects de domínios limpos para carregar opções iniciais (triggeredByUser=false)");
             }
             
-            if (microarea && dominiosPorMicroareaSegmento && dominiosPorMicroareaSegmento[microarea]) {
+            // Criar arrays para armazenar os domínios
+            var dominiosDoSegmentoAtual = [];
+            var dominiosDeOutrosSegmentos = [];
+            var todosDominios = [];
+            
+            // Verificar se temos dados para a microárea selecionada
+            if (microarea && window.dominiosPorMicroareaSegmento && window.dominiosPorMicroareaSegmento[microarea]) {
                 console.log("Dados encontrados para a microárea:", microarea);
                 
-                // Criar arrays para armazenar os domínios
-                var dominiosDoSegmentoAtual = [];
-                var dominiosDeOutrosSegmentos = [];
-                
-                // Primeiro, coletar todos os domínios organizados por segmento
-                if (microarea && dominiosPorMicroareaSegmento[microarea]) {
-                    // Processar o segmento selecionado primeiro (se existir)
-                    if (segmento && dominiosPorMicroareaSegmento[microarea][segmento]) {
-                        dominiosDoSegmentoAtual = dominiosPorMicroareaSegmento[microarea][segmento];
-                        console.log("Domínios do segmento selecionado:", dominiosDoSegmentoAtual);
-                    } else {
-                        console.log("Segmento não encontrado ou não selecionado:", segmento);
-                    }
-                    
-                    // Processar todos os outros segmentos da mesma microárea
-                    console.log("Processando domínios de outros segmentos da mesma microárea...");
-                    for (var outroSegmento in dominiosPorMicroareaSegmento[microarea]) {
-                        if (outroSegmento !== segmento) {
-                            console.log("Processando segmento diferente:", outroSegmento);
-                            var dominiosOutroSegmento = dominiosPorMicroareaSegmento[microarea][outroSegmento];
-                            console.log("Domínios do segmento", outroSegmento, ":", dominiosOutroSegmento);
-                            
-                            // Adicionar cada domínio do outro segmento ao array
-                            dominiosDeOutrosSegmentos = dominiosDeOutrosSegmentos.concat(dominiosOutroSegmento);
-                        } else {
-                            console.log("Ignorando segmento atual:", segmento);
-                        }
+                // Primeiro, coletar todos os domínios de todos os segmentos da microárea
+                for (var segmentoNaMicroarea in window.dominiosPorMicroareaSegmento[microarea]) {
+                    var dominiosSegmento = window.dominiosPorMicroareaSegmento[microarea][segmentoNaMicroarea];
+                    if (Array.isArray(dominiosSegmento)) {
+                        todosDominios = todosDominios.concat(dominiosSegmento);
                     }
                 }
                 
-                // Agora, adicionar os domínios aos selects correspondentes
-                console.log("Adicionando domínios do segmento atual ao select 'dominio'");
+                // Processar o segmento selecionado (se existir)
+                if (segmento && window.dominiosPorMicroareaSegmento[microarea][segmento]) {
+                    dominiosDoSegmentoAtual = window.dominiosPorMicroareaSegmento[microarea][segmento];
+                    console.log("Domínios do segmento selecionado:", dominiosDoSegmentoAtual);
+                    
+                    // Domínios outros são todos os domínios da microárea que não estão no segmento atual
+                    dominiosDeOutrosSegmentos = todosDominios.filter(function(dominio) {
+                        return !dominiosDoSegmentoAtual.includes(dominio);
+                    });
+                } else {
+                    console.log("Segmento não encontrado ou não selecionado:", segmento);
+                    // Se não há segmento selecionado, todos os domínios vão para "domínios outros"
+                    dominiosDeOutrosSegmentos = todosDominios;
+                }
+                
+                console.log("Total de domínios na microárea:", todosDominios.length);
+                console.log("Domínios do segmento atual:", dominiosDoSegmentoAtual.length);
+                console.log("Domínios de outros segmentos:", dominiosDeOutrosSegmentos.length);
+            } else {
+                console.log("Nenhum dado encontrado para a microárea:", microarea);
+            }
+            
+            // Adicionar os domínios aos selects correspondentes
+            console.log("Adicionando domínios do segmento atual ao select 'dominio'");
+            if (Array.isArray(dominiosDoSegmentoAtual)) {
                 for (var i = 0; i < dominiosDoSegmentoAtual.length; i++) {
                     var dominio = dominiosDoSegmentoAtual[i];
                     $('#dominio').append(new Option(dominio, dominio));
                     console.log("Adicionado domínio:", dominio);
                 }
-                
-                console.log("Adicionando domínios de outros segmentos ao select 'dominio_outros'");
-                for (var j = 0; j < dominiosDeOutrosSegmentos.length; j++) {
-                    var dominioOutro = dominiosDeOutrosSegmentos[j];
+            } else {
+                console.warn("dominiosDoSegmentoAtual não é um array:", dominiosDoSegmentoAtual);
+            }
+            
+            console.log("Adicionando domínios de outros segmentos ao select 'dominio_outros'");
+            if (Array.isArray(dominiosDeOutrosSegmentos)) {
+                // Remover duplicatas antes de adicionar
+                var dominiosOutrosUnicos = [...new Set(dominiosDeOutrosSegmentos)];
+                for (var j = 0; j < dominiosOutrosUnicos.length; j++) {
+                    var dominioOutro = dominiosOutrosUnicos[j];
                     $('#dominio_outros').append(new Option(dominioOutro, dominioOutro));
                     console.log("Adicionado domínio outro:", dominioOutro);
                 }
-                
-                // Verificar se o select de domínios outros tem opções
-                var totalOptions = $('#dominio_outros option').length;
-                console.log("Total de opções no select de domínios outros:", totalOptions);
-                console.log("Total de domínios do segmento atual:", dominiosDoSegmentoAtual.length);
-                console.log("Total de domínios de outros segmentos:", dominiosDeOutrosSegmentos.length);
             } else {
-                console.log("Nenhum dado encontrado para a microárea:", microarea);
+                console.warn("dominiosDeOutrosSegmentos não é um array:", dominiosDeOutrosSegmentos);
             }
+            
+            // Verificar se o select de domínios outros tem opções
+            var totalOptions = $('#dominio_outros option').length;
+            console.log("Total de opções no select de domínios outros:", totalOptions);
+            console.log("Total de domínios do segmento atual:", Array.isArray(dominiosDoSegmentoAtual) ? dominiosDoSegmentoAtual.length : 0);
+            console.log("Total de domínios de outros segmentos:", Array.isArray(dominiosDeOutrosSegmentos) ? dominiosDeOutrosSegmentos.length : 0);
             
             // Restaurar seleções anteriores se existirem
             var dominioArray = [];
@@ -2586,6 +2644,9 @@
 </script>
 <!-- Incluir o script de sugestões da IA -->
 <script src="{{ url_for('static', filename='js/ai_suggestions.js') }}"></script>
+
+<!-- Script para carregar domínios -->
+<script src="{{ url_for('static', filename='js/domain_loader.js') }}"></script>
 
 <!-- Script para salvar todos os formulários -->
 <script src="{{ url_for('static', filename='js/save_all.js') }}"></script>

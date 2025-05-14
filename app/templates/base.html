@@ -234,6 +234,12 @@
             show: function(message, submessage) {
                 if (!this.overlay) this.init();
                 
+                // Limpar qualquer timeout de segurança existente
+                if (this.safetyTimeout) {
+                    clearTimeout(this.safetyTimeout);
+                    this.safetyTimeout = null;
+                }
+                
                 if (message) this.message.textContent = message;
                 if (submessage) this.submessage.textContent = submessage;
                 
@@ -245,12 +251,22 @@
                 if (message) localStorage.setItem('aiLoadingMessage', message);
                 if (submessage) localStorage.setItem('aiLoadingSubmessage', submessage);
                 
-                // Adicionar um timeout de segurança para esconder o overlay após 30 segundos
+                // Adicionar um timeout de segurança para esconder o overlay após 15 segundos
                 // Isso garante que o overlay não ficará preso na tela se algo der errado
                 this.safetyTimeout = setTimeout(() => {
                     console.log('Timeout de segurança acionado no método show para esconder o overlay de carregamento');
                     this.completeProgress();
-                }, 30000);
+                }, 15000); // Reduzido de 30s para 15s
+                
+                // Adicionar um segundo timeout de segurança (mais curto) para garantir que o localStorage seja limpo
+                setTimeout(() => {
+                    if (localStorage.getItem('aiLoadingActive') === 'true') {
+                        console.log('Limpando localStorage após 5 segundos (mecanismo de segurança adicional)');
+                        localStorage.removeItem('aiLoadingActive');
+                        localStorage.removeItem('aiLoadingMessage');
+                        localStorage.removeItem('aiLoadingSubmessage');
+                    }
+                }, 5000);
             },
             
             hide: function() {
@@ -334,16 +350,48 @@
                 if (localStorage.getItem('aiLoadingActive') === 'true') {
                     const message = localStorage.getItem('aiLoadingMessage');
                     const submessage = localStorage.getItem('aiLoadingSubmessage');
+                    
+                    // Verificar se estamos na página de projetos - se sim, não mostrar o overlay
+                    if (window.location.pathname.includes('/projects')) {
+                        console.log('Página de projetos detectada, limpando estado do overlay');
+                        localStorage.removeItem('aiLoadingActive');
+                        localStorage.removeItem('aiLoadingMessage');
+                        localStorage.removeItem('aiLoadingSubmessage');
+                        return;
+                    }
+                    
                     this.show(message, submessage);
                     
-                    // Adicionar um timeout de segurança para esconder o overlay após 30 segundos
+                    // Adicionar um timeout de segurança para esconder o overlay após 15 segundos
                     // Isso evita que o overlay fique preso na tela se algo der errado
                     setTimeout(() => {
                         if (localStorage.getItem('aiLoadingActive') === 'true') {
                             console.log('Timeout de segurança acionado para esconder o overlay de carregamento');
                             this.completeProgress();
                         }
-                    }, 30000);
+                    }, 15000); // Reduzido de 30s para 15s
+                }
+            },
+            
+            // Método para forçar a limpeza do estado do overlay
+            forceCleanup: function() {
+                console.log('Forçando limpeza do estado do overlay');
+                
+                // Limpar localStorage
+                localStorage.removeItem('aiLoadingActive');
+                localStorage.removeItem('aiLoadingMessage');
+                localStorage.removeItem('aiLoadingSubmessage');
+                
+                // Esconder o overlay
+                if (this.overlay) {
+                    this.overlay.classList.remove('active');
+                    this.stopProgress();
+                }
+                
+                // Limpar o timeout de segurança se existir
+                if (this.safetyTimeout) {
+                    clearTimeout(this.safetyTimeout);
+                    this.safetyTimeout = null;
                 }
             }
         };

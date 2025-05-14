@@ -33,6 +33,168 @@ def extract_name_from_email(email):
     except:
         return email  # Retorna o email original em caso de erro
 
+# Métodos auxiliares para obter dados
+def _get_categories_lists():
+    """Obtém as listas de categorias do banco de dados."""
+    organized_lists = {}
+    
+    # Obter todas as categorias ativas
+    all_categories = CategoriaLista.query.filter_by(ativo=True).all()
+    
+    # Inicializar listas vazias para cada tipo
+    for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
+        organized_lists[tipo] = []
+    
+    # Mapeamento de tipos para consulta no banco de dados
+    tipo_mapping = {
+        'microarea': 'macroárea',
+        'segmento': 'segmento',
+        'dominio': 'dominio'
+    }
+    
+    # Estrutura para armazenar domínios por microárea e segmento
+    dominios_por_microarea_segmento = {}
+    
+    # Processar cada categoria
+    for categoria in all_categories:
+        tipo = categoria.tipo
+        valor = categoria.valor
+        
+        # Mapear o tipo do banco de dados para o tipo usado na interface
+        if tipo in tipo_mapping.values():
+            # Encontrar a chave correspondente ao valor
+            for ui_tipo, db_tipo in tipo_mapping.items():
+                if db_tipo == tipo:
+                    # Adicionar à lista correspondente
+                    if valor not in organized_lists[ui_tipo]:
+                        organized_lists[ui_tipo].append(valor)
+                    break
+        elif tipo in organized_lists:
+            # Para outros tipos que não estão no mapeamento
+            if valor not in organized_lists[tipo]:
+                organized_lists[tipo].append(valor)
+        
+        # Processar categorias para a estrutura hierárquica
+        if tipo == 'macroárea':
+            # Macroárea é adicionada diretamente
+            if valor not in organized_lists['microarea']:
+                organized_lists['microarea'].append(valor)
+            
+            # Inicializar a estrutura para esta macroárea
+            if valor not in dominios_por_microarea_segmento:
+                dominios_por_microarea_segmento[valor] = {}
+        
+        elif tipo == 'segmento':
+            # Segmento está no formato "Macroárea|Segmento"
+            if '|' in valor:
+                parts = valor.split('|')
+                if len(parts) >= 2:
+                    macroárea = parts[0]
+                    segmento = parts[1]
+                    
+                    # Adicionar à lista de segmentos
+                    if segmento not in organized_lists['segmento']:
+                        organized_lists['segmento'].append(segmento)
+                    
+                    # Adicionar à estrutura hierárquica
+                    if macroárea not in dominios_por_microarea_segmento:
+                        dominios_por_microarea_segmento[macroárea] = {}
+                    
+                    if segmento not in dominios_por_microarea_segmento[macroárea]:
+                        dominios_por_microarea_segmento[macroárea][segmento] = []
+        
+        elif tipo == 'dominio':
+            # Domínio está no formato "Macroárea|Segmento|Domínio"
+            if '|' in valor:
+                parts = valor.split('|')
+                if len(parts) >= 3:
+                    macroárea = parts[0]
+                    segmento = parts[1]
+                    dominio = parts[2]
+                    
+                    # Adicionar à lista de domínios
+                    if dominio not in organized_lists['dominio']:
+                        organized_lists['dominio'].append(dominio)
+                    
+                    # Adicionar à estrutura hierárquica
+                    if macroárea not in dominios_por_microarea_segmento:
+                        dominios_por_microarea_segmento[macroárea] = {}
+                    
+                    if segmento not in dominios_por_microarea_segmento[macroárea]:
+                        dominios_por_microarea_segmento[macroárea][segmento] = []
+                    
+                    if dominio not in dominios_por_microarea_segmento[macroárea][segmento]:
+                        dominios_por_microarea_segmento[macroárea][segmento].append(dominio)
+    
+    # Converter a estrutura hierárquica para JSON
+    organized_lists['dominios_por_microarea_segmento_json'] = json.dumps(dominios_por_microarea_segmento)
+    
+    return organized_lists
+
+def _get_aia_data():
+    """Simula a obtenção dos dados de AIA (que seria carregado de um arquivo)."""
+    return [
+        {
+            "Macroárea": "Tecnologia da Informação",
+            "Segmento": "Inteligência Artificial",
+            "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
+        },
+        {
+            "Macroárea": "Tecnologia da Informação",
+            "Segmento": "Infraestrutura",
+            "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
+        },
+        {
+            "Macroárea": "Energia",
+            "Segmento": "Renovável",
+            "Domínios Afeitos": "Solar; Eólica; Biomassa"
+        },
+        {
+            "Macroárea": "Energia",
+            "Segmento": "Eficiência Energética",
+            "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
+        }
+    ]
+
+def _get_tecverde_classes():
+    """Simula a obtenção das classes de tecnologias verdes."""
+    return {
+        "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+        "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+        "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+        "Conservação": "Tecnologias para conservação de recursos naturais",
+        "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+    }
+
+def _get_tecverde_subclasses():
+    """Simula a obtenção das subclasses de tecnologias verdes."""
+    return {
+        "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+        "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+        "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+        "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+        "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+    }
+
+def _get_ai_ratings(project_id):
+    """Obtém as avaliações da IA para um projeto."""
+    from app.routes_ai_ratings import get_ai_rating
+    
+    # Obter avaliações para este projeto e usuário
+    user_id = current_user.email if current_user.is_authenticated else None
+    
+    if not user_id:
+        return None
+    
+    # Carregar avaliações
+    aia_rating = get_ai_rating(project_id, user_id, 'aia')
+    tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
+    
+    return {
+        'aia': aia_rating.to_dict() if aia_rating else {'rating': 0, 'observacoes': ''},
+        'tecverde': tecverde_rating.to_dict() if tecverde_rating else {'rating': 0, 'observacoes': ''}
+    }
+
 # Rota para a página inicial
 @main.route('/')
 def index():
@@ -76,32 +238,105 @@ def logout():
 @login_required
 def projects():
     try:
-        # Obter dados dos projetos
-        projects_data = Projeto.query.all()
+        # Obter parâmetros da requisição
+        page = request.args.get('page', 1, type=int)
+        per_page = 50  # Número de projetos por página
+        search = request.args.get('search', '')
+        filter_type = request.args.get('filter', 'all')
         
-        # Obter todas as sugestões da IA
-        ai_suggestions = AISuggestion.query.all()
+        # Carregar projetos com eager loading para evitar consultas N+1
+        from sqlalchemy.orm import joinedload
+        from sqlalchemy import or_
+        
+        # Iniciar a consulta base
+        query = Projeto.query.options(
+            joinedload(Projeto.categoria)
+            # Removido joinedload(Projeto.ai_ratings) porque ai_ratings é lazy='dynamic'
+            # e não suporta eager loading
+        )
+        
+        # Aplicar filtro de busca se fornecido
+        if search:
+            search_term = f"%{search}%"
+            query = query.filter(
+                or_(
+                    Projeto.titulo.ilike(search_term),
+                    Projeto.codigo_projeto.ilike(search_term),
+                    Projeto.unidade_embrapii.ilike(search_term),
+                    Projeto._aia_n1_macroarea.ilike(search_term),
+                    Projeto._aia_n2_segmento.ilike(search_term)
+                )
+            )
+        
+        # Aplicar filtro de categoria se não for 'all'
+        if filter_type == 'human_validated':
+            # Projetos validados por humano (tem avaliações não automáticas)
+            from sqlalchemy import exists
+            from app.models import AIRating
+            query = query.filter(
+                exists().where(
+                    (AIRating.project_id == Projeto.id) & 
+                    (AIRating.user_id != 'sistema.automatico@embrapii.org.br')
+                )
+            )
+        elif filter_type == 'ai_classified':
+            # Projetos classificados por IA (tem sugestões da IA)
+            from sqlalchemy import exists
+            query = query.filter(
+                exists().where(AISuggestion.id_projeto == Projeto.id)
+            )
+        elif filter_type == 'uncategorized':
+            # Projetos não classificados (não tem categoria)
+            query = query.filter(Projeto.categoria == None)
+        
+        # Executar a consulta com paginação
+        projects_query = query.paginate(page=page, per_page=per_page, error_out=False)
+        
+        projects_data = projects_query.items
+        
+        # Obter IDs dos projetos na página atual para filtrar sugestões da IA
+        project_ids = [p.id for p in projects_data]
+        
+        # Obter apenas as sugestões da IA para os projetos na página atual
+        ai_suggestions = AISuggestion.query.filter(
+            AISuggestion.id_projeto.in_(project_ids)
+        ).all()
+        
+        # Criar um dicionário de sugestões para acesso mais rápido
+        ai_suggestions_by_project = {s.id_projeto: s for s in ai_suggestions}
         ai_suggestions_dict = [suggestion.to_dict() for suggestion in ai_suggestions]
         
-        # Verificar se cada projeto foi validado por humano com base nas avaliações
+        # Otimizar a verificação de cada projeto
         for project in projects_data:
             # Verificar se o projeto tem alguma avaliação da IA feita por humano
-            project.human_validated = any(
-                rating.user_id != 'sistema.automatico@embrapii.org.br' 
-                for rating in project.ai_ratings
-            )
+            # Usando list comprehension em vez de any() para melhor performance
+            human_ratings = [
+                rating for rating in project.ai_ratings 
+                if rating.user_id != 'sistema.automatico@embrapii.org.br'
+            ]
+            project.human_validated = len(human_ratings) > 0
             
-            # Verificar se o projeto tem sugestão da IA
-            project.ai_classified = any(suggestion.id_projeto == project.id for suggestion in ai_suggestions)
+            # Verificar se o projeto tem sugestão da IA usando o dicionário
+            project.ai_classified = project.id in ai_suggestions_by_project
             
             # Verificar se o projeto já foi categorizado
             project.categorizado = project.categoria is not None
         
-        return render_template('projects.html', projects=projects_data, ai_suggestions=ai_suggestions_dict)
+        return render_template(
+            'projects.html', 
+            projects=projects_data, 
+            ai_suggestions=ai_suggestions_dict,
+            pagination=projects_query
+        )
         
     except Exception as e:
+        # Melhorar o log de erros para facilitar a depuração
+        import traceback
+        error_details = traceback.format_exc()
+        logger.error(f"Erro ao carregar projetos: {str(e)}\n{error_details}")
+        
+        # Informar o usuário sobre o erro
         flash(f'Erro ao carregar projetos: {str(e)}', 'error')
-        logger.error(f"Erro ao carregar projetos: {str(e)}")
         return redirect(url_for('main.login'))
 
 # Função para registrar log de categorização
@@ -168,12 +403,12 @@ def get_project_logs(project_id):
         return []
 
 # Rota para categorização de um projeto
-@main.route('/categorize/<int:project_id>', methods=['GET', 'POST'])
+@main.route('/categorize/<project_id>', methods=['GET', 'POST'])
 @login_required
 def categorize(project_id):
     try:
-        # Buscar o projeto
-        project = Projeto.query.get_or_404(project_id)
+        # Buscar o projeto pelo código do projeto (string) em vez do ID (inteiro)
+        project = Projeto.query.filter_by(codigo_projeto=project_id).first_or_404()
         
         if request.method == 'POST':
             # Processar o formulário de categorização
@@ -270,7 +505,7 @@ def categorize(project_id):
         form = CategorizacaoForm()
         
         # Obter listas de categorias
-        categories_lists = self._get_categories_lists()
+        categories_lists = _get_categories_lists()
         
         # Obter categorização existente
         existing = {
@@ -308,7 +543,7 @@ def categorize(project_id):
             if openai_api_key:
                 try:
                     # Obter dados de aia.json (simulado para este exemplo)
-                    aia_data = self._get_aia_data()
+                    aia_data = _get_aia_data()
                     
                     # Chamar OpenAI para sugerir categorias
                     openai_client = OpenAIClient(openai_api_key)
@@ -341,11 +576,11 @@ def categorize(project_id):
                     logger.error(f"Erro ao obter sugestão da IA: {str(e)}")
         
         # Obter dados para tecnologias verdes
-        tecverde_classes = self._get_tecverde_classes()
-        tecverde_subclasses = self._get_tecverde_subclasses()
+        tecverde_classes = _get_tecverde_classes()
+        tecverde_subclasses = _get_tecverde_subclasses()
         
         # Obter avaliações da IA
-        ai_ratings = self._get_ai_ratings(project.id)
+        ai_ratings = _get_ai_ratings(project.id)
         
         # Obter logs do projeto
         project_logs = get_project_logs(project.id)
@@ -370,96 +605,8 @@ def categorize(project_id):
         logger.error(f"Erro na categorização: {str(e)}")
         return redirect(url_for('main.projects'))
 
-    # Métodos auxiliares para obter dados
-    def _get_categories_lists(self):
-        """Obtém as listas de categorias do banco de dados."""
-        organized_lists = {}
-        
-        for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
-            items = CategoriaLista.query.filter_by(tipo=tipo, ativo=True).all()
-            organized_lists[tipo] = [item.valor for item in items if item.valor]
-        
-        # Obter dados de domínios por microárea e segmento
-        # Simulando para este exemplo
-        organized_lists['dominios_por_microarea_segmento_json'] = json.dumps({
-            "Tecnologia da Informação": {
-                "Inteligência Artificial": ["Machine Learning", "Visão Computacional", "NLP"],
-                "Infraestrutura": ["Cloud Computing", "Edge Computing", "IoT"]
-            },
-            "Energia": {
-                "Renovável": ["Solar", "Eólica", "Biomassa"],
-                "Eficiência Energética": ["Smart Grid", "Armazenamento", "Gestão de Energia"]
-            }
-        })
-        
-        return organized_lists
-
-    def _get_aia_data(self):
-        """Simula a obtenção dos dados de AIA (que seria carregado de um arquivo)."""
-        return [
-            {
-                "Macroárea": "Tecnologia da Informação",
-                "Segmento": "Inteligência Artificial",
-                "Domínios Afeitos": "Machine Learning; Visão Computacional; NLP"
-            },
-            {
-                "Macroárea": "Tecnologia da Informação",
-                "Segmento": "Infraestrutura",
-                "Domínios Afeitos": "Cloud Computing; Edge Computing; IoT"
-            },
-            {
-                "Macroárea": "Energia",
-                "Segmento": "Renovável",
-                "Domínios Afeitos": "Solar; Eólica; Biomassa"
-            },
-            {
-                "Macroárea": "Energia",
-                "Segmento": "Eficiência Energética",
-                "Domínios Afeitos": "Smart Grid; Armazenamento; Gestão de Energia"
-            }
-        ]
-
-    def _get_tecverde_classes(self):
-        """Simula a obtenção das classes de tecnologias verdes."""
-        return {
-            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
-            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
-            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
-            "Conservação": "Tecnologias para conservação de recursos naturais",
-            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
-        }
-
-    def _get_tecverde_subclasses(self):
-        """Simula a obtenção das subclasses de tecnologias verdes."""
-        return {
-            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
-            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
-            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
-            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
-            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
-        }
-
-    def _get_ai_ratings(self, project_id):
-        """Obtém as avaliações da IA para um projeto."""
-        from app.routes_ai_ratings import get_ai_rating
-        
-        # Obter avaliações para este projeto e usuário
-        user_id = current_user.email if current_user.is_authenticated else None
-        
-        if not user_id:
-            return None
-        
-        # Carregar avaliações
-        aia_rating = get_ai_rating(project_id, user_id, 'aia')
-        tecverde_rating = get_ai_rating(project_id, user_id, 'tecverde')
-        
-        return {
-            'aia': aia_rating.to_dict() if aia_rating else {'rating': 0, 'observacoes': ''},
-            'tecverde': tecverde_rating.to_dict() if tecverde_rating else {'rating': 0, 'observacoes': ''}
-        }
-
 # Rota para salvar tecnologias verdes
-@main.route('/save_tecverde/<int:project_id>', methods=['POST'])
+@main.route('/save_tecverde/<project_id>', methods=['POST'])
 @login_required
 def save_tecverde(project_id):
     try:
@@ -469,8 +616,8 @@ def save_tecverde(project_id):
         if not data:
             return jsonify({'error': 'Dados não fornecidos'}), 400
         
-        # Buscar o projeto
-        project = Projeto.query.get_or_404(project_id)
+        # Buscar o projeto pelo código do projeto (string) em vez do ID (inteiro)
+        project = Projeto.query.filter_by(codigo_projeto=project_id).first_or_404()
         
         # Normalizar valor de tecverde_se_aplica para booleano
         tecverde_se_aplica_str = data.get('tecverde_se_aplica', '')
@@ -659,32 +806,61 @@ def add_dominio():
         segmento = data['segmento']
         novo_dominio = data['dominio']
         
+        # Criar o valor hierárquico para o domínio
+        valor_dominio = f"{microarea}|{segmento}|{novo_dominio}"
+        
         # Verificar se o domínio já existe
         existente = CategoriaLista.query.filter_by(
             tipo='dominio', 
-            valor=novo_dominio
+            valor=valor_dominio
         ).first()
         
         if existente:
-            return jsonify({'success': False, 'error': 'Este domínio já existe.'}), 400
+            return jsonify({'success': False, 'error': 'Este domínio já existe para esta combinação de Macroárea e Segmento.'}), 400
         
         # Adicionar novo domínio à lista
         dominio = CategoriaLista(
             tipo='dominio',
-            valor=novo_dominio,
+            valor=valor_dominio,
             ativo=True
         )
         db.session.add(dominio)
         db.session.commit()
         
-        # Buscar domínios atualizados
-        dominios = CategoriaLista.query.filter_by(tipo='dominio', ativo=True).all()
-        dominios_list = [d.valor for d in dominios]
+        # Buscar domínios atualizados para esta combinação de macroárea e segmento
+        dominios_por_microarea_segmento = {}
+        
+        # Obter todas as categorias de domínio ativas
+        all_dominios = CategoriaLista.query.filter_by(tipo='dominio', ativo=True).all()
+        
+        # Processar cada domínio para extrair a estrutura hierárquica
+        for cat in all_dominios:
+            if '|' in cat.valor:
+                parts = cat.valor.split('|')
+                if len(parts) >= 3:
+                    m = parts[0]  # macroárea
+                    s = parts[1]  # segmento
+                    d = parts[2]  # domínio
+                    
+                    if m not in dominios_por_microarea_segmento:
+                        dominios_por_microarea_segmento[m] = {}
+                    
+                    if s not in dominios_por_microarea_segmento[m]:
+                        dominios_por_microarea_segmento[m][s] = []
+                    
+                    if d not in dominios_por_microarea_segmento[m][s]:
+                        dominios_por_microarea_segmento[m][s].append(d)
+        
+        # Obter a lista de domínios para a combinação específica
+        dominios_list = []
+        if microarea in dominios_por_microarea_segmento and segmento in dominios_por_microarea_segmento[microarea]:
+            dominios_list = dominios_por_microarea_segmento[microarea][segmento]
         
         return jsonify({
             'success': True, 
             'message': 'Domínio adicionado com sucesso.',
-            'dominios': dominios_list
+            'dominios': dominios_list,
+            'dominios_por_microarea_segmento': dominios_por_microarea_segmento
         })
         
     except Exception as e:
@@ -693,7 +869,7 @@ def add_dominio():
         return jsonify({'success': False, 'error': f'Erro ao adicionar domínio: {str(e)}'}), 500
 
 # Rota para salvar uma classificação adicional individualmente
-@main.route('/save_additional_classification/<int:project_id>', methods=['POST'])
+@main.route('/save_additional_classification/<project_id>', methods=['POST'])
 @login_required
 def save_additional_classification(project_id):
     try:
@@ -709,7 +885,7 @@ def save_additional_classification(project_id):
                 return jsonify({'error': f'Campo obrigatório ausente: {field}'}), 400
         
         # Verificar se o projeto existe
-        project = Projeto.query.get_or_404(project_id)
+        project = Projeto.query.filter_by(codigo_projeto=project_id).first_or_404()
         
         # Verificar quantas classificações adicionais já existem
         count = ClassificacaoAdicional.query.filter_by(id_projeto=project_id).count()
@@ -754,7 +930,7 @@ def save_additional_classification(project_id):
         return jsonify({'error': str(e)}), 500
 
 # Rota para remover uma classificação adicional
-@main.route('/remove_additional_classification/<int:project_id>', methods=['POST'])
+@main.route('/remove_additional_classification/<project_id>', methods=['POST'])
 @login_required
 def remove_additional_classification(project_id):
     try:
@@ -769,9 +945,12 @@ def remove_additional_classification(project_id):
         except ValueError:
             return jsonify({'error': 'Índice inválido'}), 400
         
+        # Buscar o projeto pelo código
+        project = Projeto.query.filter_by(codigo_projeto=project_id).first_or_404()
+        
         # Buscar a classificação pelo índice (ordem)
         classificacao = ClassificacaoAdicional.query.filter_by(
-            id_projeto=project_id,
+            id_projeto=project.id,
             ordem=index
         ).first()
         
@@ -929,24 +1108,79 @@ def lists():
             # Processar o formulário de atualização de listas
             lists_data = {}
             
+            # Mapeamento de tipos para consulta no banco de dados
+            tipo_mapping = {
+                'microarea': 'macroárea',
+                'segmento': 'segmento',
+                'dominio': 'dominio'
+            }
+            
             for column in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
                 values = request.form.getlist(f'{column}[]')
                 # Filtrar valores vazios
                 values = [v for v in values if v.strip()]
                 lists_data[column] = values
                 
+                # Usar o mapeamento para obter o tipo correto no banco de dados
+                db_tipo = tipo_mapping.get(column, column)
+                
                 # Atualizar no banco de dados
                 # Primeiro, marcar todos como inativos
-                CategoriaLista.query.filter_by(tipo=column).update({CategoriaLista.ativo: False})
+                CategoriaLista.query.filter_by(tipo=db_tipo).update({CategoriaLista.ativo: False})
                 
                 # Depois, atualizar ou criar cada item
                 for value in values:
-                    lista = CategoriaLista.query.filter_by(tipo=column, valor=value).first()
-                    if lista:
-                        lista.ativo = True
+                    # Para segmentos e domínios, precisamos manter o formato hierárquico
+                    if column == 'segmento' or column == 'dominio':
+                        # Buscar todos os itens existentes para este tipo
+                        existing_items = CategoriaLista.query.filter_by(tipo=db_tipo, ativo=True).all()
+                        
+                        # Verificar se o valor já existe em algum item
+                        found = False
+                        for item in existing_items:
+                            if '|' in item.valor:
+                                parts = item.valor.split('|')
+                                if (column == 'segmento' and len(parts) >= 2 and parts[1] == value) or \
+                                   (column == 'dominio' and len(parts) >= 3 and parts[2] == value):
+                                    item.ativo = True
+                                    found = True
+                                    break
+                        
+                        # Se não encontrou, criar um novo item com o formato hierárquico
+                        if not found:
+                            # Para segmentos, precisamos de uma macroárea
+                            if column == 'segmento':
+                                # Usar a primeira macroárea disponível
+                                macroáreas = CategoriaLista.query.filter_by(tipo='macroárea', ativo=True).all()
+                                if macroáreas:
+                                    macroárea = macroáreas[0].valor
+                                    novo_valor = f"{macroárea}|{value}"
+                                    nova_lista = CategoriaLista(tipo=db_tipo, valor=novo_valor, ativo=True)
+                                    db.session.add(nova_lista)
+                            
+                            # Para domínios, precisamos de uma macroárea e um segmento
+                            elif column == 'dominio':
+                                # Usar a primeira combinação de macroárea e segmento disponível
+                                segmentos = CategoriaLista.query.filter_by(tipo='segmento', ativo=True).all()
+                                if segmentos:
+                                    for segmento in segmentos:
+                                        if '|' in segmento.valor:
+                                            parts = segmento.valor.split('|')
+                                            if len(parts) >= 2:
+                                                macroárea = parts[0]
+                                                segmento_nome = parts[1]
+                                                novo_valor = f"{macroárea}|{segmento_nome}|{value}"
+                                                nova_lista = CategoriaLista(tipo=db_tipo, valor=novo_valor, ativo=True)
+                                                db.session.add(nova_lista)
+                                                break
                     else:
-                        nova_lista = CategoriaLista(tipo=column, valor=value, ativo=True)
-                        db.session.add(nova_lista)
+                        # Para outros tipos, atualizar ou criar normalmente
+                        lista = CategoriaLista.query.filter_by(tipo=db_tipo, valor=value).first()
+                        if lista:
+                            lista.ativo = True
+                        else:
+                            nova_lista = CategoriaLista(tipo=db_tipo, valor=value, ativo=True)
+                            db.session.add(nova_lista)
             
             db.session.commit()
             flash('Listas atualizadas com sucesso!', 'success')
@@ -954,9 +1188,43 @@ def lists():
         
         # Para GET, obter listas de categorias
         organized_lists = {}
+        
+        # Mapeamento de tipos para consulta no banco de dados
+        tipo_mapping = {
+            'microarea': 'macroárea',
+            'segmento': 'segmento',
+            'dominio': 'dominio'
+        }
+        
         for column in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
-            items = CategoriaLista.query.filter_by(tipo=column, ativo=True).all()
-            organized_lists[column] = [item.valor for item in items]
+            # Usar o mapeamento para obter o tipo correto no banco de dados
+            db_tipo = tipo_mapping.get(column, column)
+            items = CategoriaLista.query.filter_by(tipo=db_tipo, ativo=True).all()
+            
+            # Para segmentos e domínios, extrair apenas a parte relevante do valor
+            if column == 'segmento' or column == 'dominio':
+                values = []
+                for item in items:
+                    if '|' in item.valor:
+                        parts = item.valor.split('|')
+                        if column == 'segmento' and len(parts) >= 2:
+                            # Extrair apenas o nome do segmento
+                            segmento = parts[1]
+                            if segmento not in values:
+                                values.append(segmento)
+                        elif column == 'dominio' and len(parts) >= 3:
+                            # Extrair apenas o nome do domínio
+                            dominio = parts[2]
+                            if dominio not in values:
+                                values.append(dominio)
+                    else:
+                        # Se não tiver o formato esperado, usar o valor completo
+                        if item.valor not in values:
+                            values.append(item.valor)
+                organized_lists[column] = values
+            else:
+                # Para outros tipos, usar o valor completo
+                organized_lists[column] = [item.valor for item in items]
         
         return render_template('lists.html', categories_lists=organized_lists)
         
