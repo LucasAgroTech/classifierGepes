@@ -253,9 +253,10 @@ def projects():
     try:
         # Obter parâmetros da requisição
         page = request.args.get('page', 1, type=int)
-        per_page = 50  # Número de projetos por página
+        per_page = 20  # Reduzido para melhor desempenho com infinite scroll
         search = request.args.get('search', '')
         filter_type = request.args.get('filter', 'all')
+        is_ajax = request.args.get('ajax', '0') == '1'
         
         # Carregar projetos com eager loading para evitar consultas N+1
         from sqlalchemy.orm import joinedload
@@ -281,25 +282,20 @@ def projects():
                 )
             )
         
-        # Aplicar filtro de categoria se não for 'all'
-        if filter_type == 'human_validated':
-            # Projetos validados por humano (tem categoria)
-            query = query.filter(Projeto.categoria != None)
-            # Adicionar log para depuração
-            logger.info(f"Aplicando filtro para projetos validados por humano")
-        elif filter_type == 'ai_classified':
-            # Projetos classificados por IA (tem sugestões da IA)
-            from sqlalchemy import exists
-            query = query.filter(
-                exists().where(AISuggestion.id_projeto == Projeto.id)
-            )
-        elif filter_type == 'uncategorized':
-            # Projetos não classificados (não tem categoria e não tem sugestões da IA)
-            from sqlalchemy import exists, not_
-            query = query.filter(
-                Projeto.categoria == None,
-                not_(exists().where(AISuggestion.id_projeto == Projeto.id))
-            )
+        # Aplicar filtro de categoria se fornecido
+        if filter_type != 'all' and filter_type in ['uncategorized', 'ai_classified', 'human_validated']:
+            if filter_type == 'uncategorized':
+                # Projetos sem categoria
+                query = query.outerjoin(Categoria).filter(Categoria.id_projeto == None)
+            elif filter_type == 'ai_classified':
+                # Projetos classificados por IA (tem sugestão da IA mas não tem categoria)
+                query = query.outerjoin(Categoria).outerjoin(AISuggestion).filter(
+                    Categoria.id_projeto == None,
+                    AISuggestion.id_projeto == Projeto.id
+                )
+            elif filter_type == 'human_validated':
+                # Projetos validados por humano (tem categoria)
+                query = query.join(Categoria)
         
         # Executar a consulta com paginação
         projects_query = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -318,14 +314,7 @@ def projects():
         ai_suggestions_by_project = {s.id_projeto: s for s in ai_suggestions}
         ai_suggestions_dict = [suggestion.to_dict() for suggestion in ai_suggestions]
         
-        # Buscar todos os projetos que têm avaliações feitas por humanos
-        from sqlalchemy import func
-        from app.models import AIRating
-        
-        # Criar um conjunto de IDs de projetos com avaliações humanas para busca rápida
-        human_rated_project_ids = set()
-        
-        # Verificar cada projeto individualmente para garantir que todos os projetos com avaliações humanas sejam incluídos
+        # Definir atributos para cada projeto
         for project in projects_data:
             # Verificar se o projeto tem categoria (já foi classificado)
             project.categorizado = project.categoria is not None
@@ -333,29 +322,50 @@ def projects():
             # Verificar se o projeto tem sugestão da IA usando o dicionário
             project.ai_classified = project.id in ai_suggestions_by_project
             
-            # Verificar se o projeto tem alguma avaliação da IA feita por humano
-            human_ratings_count = AIRating.query.filter(
-                AIRating.id_projeto == project.id,
-                AIRating.user_id != 'sistema.automatico@embrapii.org.br'
-            ).count()
-            
-            # Marcar o projeto como validado por humano se tiver pelo menos uma avaliação humana
+            # Marcar o projeto como validado por humano apenas se tiver categoria
             project.human_validated = project.categorizado
             
-            # Adicionar ao conjunto de IDs para referência futura
-            if project.human_validated:
-                human_rated_project_ids.add(project.id)
-                
             # Log para depuração
             if project.human_validated:
                 logger.info(f"Projeto {project.codigo_projeto} (ID: {project.id}) marcado como validado por humano")
         
+        # Se for uma requisição AJAX, retornar apenas os dados dos projetos em formato JSON
+        if is_ajax:
+            # Preparar dados para JSON
+            projects_json = []
+            for project in projects_data:
+                project_dict = {
+                    'id': project.id,
+                    'codigo_projeto': project.codigo_projeto,
+                    'titulo': project.titulo,
+                    'unidade_embrapii': project.unidade_embrapii,
+                    'data_contrato': project.data_contrato,
+                    '_aia_n1_macroarea': project._aia_n1_macroarea,
+                    '_aia_n2_segmento': project._aia_n2_segmento,
+                    'tecverde_se_aplica': project.tecverde_se_aplica,
+                    'tecverde_classe': project.tecverde_classe,
+                    'tecverde_subclasse': project.tecverde_subclasse,
+                    'human_validated': project.human_validated,
+                    'ai_classified': project.ai_classified
+                }
+                projects_json.append(project_dict)
+            
+            return jsonify({
+                'projects': projects_json,
+                'has_next': projects_query.has_next,
+                'next_page': projects_query.next_num if projects_query.has_next else None,
+                'total': projects_query.total
+            })
+        
+        # Para requisições normais, renderizar o template
         return render_template(
             'projects.html', 
             projects=projects_data, 
             ai_suggestions=ai_suggestions_dict,
             pagination=projects_query,
-            total_projects=projects_query.total  # Adicionar o total de projetos que correspondem ao filtro
+            total_projects=projects_query.total,
+            has_next=projects_query.has_next,
+            next_page=projects_query.next_num if projects_query.has_next else None
         )
         
     except Exception as e:

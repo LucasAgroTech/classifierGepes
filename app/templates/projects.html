@@ -219,6 +219,32 @@
         opacity: 0.5;
     }
     
+    /* Estilos para o infinite scroll */
+    .loading-more {
+        text-align: center;
+        padding: 1.5rem;
+        color: var(--text-muted);
+        display: none;
+    }
+    
+    .loading-more i {
+        animation: spin 1s linear infinite;
+        margin-right: 0.5rem;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    #end-of-results {
+        text-align: center;
+        padding: 1.5rem;
+        color: var(--text-muted);
+        font-style: italic;
+        display: none;
+    }
+    
     /* Alternância de cores nas linhas */
     #projectsTable tbody tr:nth-child(even) {
         background-color: rgba(0, 0, 0, 0.02);
@@ -355,11 +381,34 @@
                 <option value="human_validated">Validado por Humano</option>
             </select>
         </div>
+        <div class="filter-container">
+            <i class="fas fa-leaf"></i>
+            <select id="tecVerdeFilter" class="form-control filter-select">
+                <option value="all">Todas</option>
+                <option value="sim">Sim</option>
+                <option value="nao">Não</option>
+            </select>
+        </div>
         <div class="search-container">
             <i class="fas fa-search"></i>
             <input type="text" id="searchInput" class="form-control search-input" placeholder="Buscar projeto...">
         </div>
     </div>
+</div>
+
+<!-- Elemento oculto para armazenar dados de paginação -->
+<div id="pagination-data" 
+     data-current-page="{{ pagination.page }}" 
+     data-has-next="{{ 'true' if has_next else 'false' }}" 
+     data-next-page="{{ next_page if next_page else '' }}"
+     style="display: none;">
+</div>
+
+<div class="loading-more">
+    <i class="fas fa-spinner"></i> Carregando mais projetos...
+</div>
+<div id="end-of-results">
+    Todos os projetos foram carregados.
 </div>
 
 <div class="card project-table-card">
@@ -465,21 +514,20 @@
                                 {% else %}
                                 <span class="project-code">Sim</span>
                                 {% endif %}
-                            {% else %}
-                                {% set project_id = project.codigo_projeto %}
-                                {% set has_ai_suggestion = false %}
-                                {% set ai_suggestion_value = 0 %}
-                                {% set ai_suggestion_class = "" %}
-                                {% set ai_suggestion_subclass = "" %}
-                                
-                                {% for suggestion in ai_suggestions if suggestion.project_id == project_id %}
+                {% else %}
+                    {% set has_ai_suggestion = false %}
+                    {% set ai_suggestion_value = 0 %}
+                    {% set ai_suggestion_class = "" %}
+                    {% set ai_suggestion_subclass = "" %}
+                    
+                    {% for suggestion in ai_suggestions if suggestion.project_id == project.id %}
                                     {% set has_ai_suggestion = true %}
                                     {% set ai_suggestion_value = suggestion.tecverde_se_aplica %}
                                     {% set ai_suggestion_class = suggestion.tecverde_classe %}
                                     {% set ai_suggestion_subclass = suggestion.tecverde_subclasse %}
                                 {% endfor %}
                                 
-                                {% if has_ai_suggestion and ai_suggestion_value == 1 %}
+                                {% if has_ai_suggestion and ai_suggestion_value == True %}
                                     {% if ai_suggestion_class and ai_suggestion_subclass %}
                                     <span class="project-code" data-bs-toggle="tooltip" data-bs-html="true" 
                                           title="<div class='text-start'><strong>Classe:</strong> {{ ai_suggestion_class }}<br><strong>Subclasse:</strong> {{ ai_suggestion_subclass }}<br><em>(Sugerido por IA)</em></div>">
@@ -576,46 +624,38 @@
             aiLoading.completeProgress();
         }
         
-        // Adicionar atributo data-categorizado às linhas
-        $(".clickable-row").each(function() {
-            // Verificar se o badge principal mostra algum status de classificação
-            var badgeText = $(this).find(".badge").first().text();
-            var isHumanValidated = badgeText === "Validado por Humano";
-            var isAIClassified = badgeText === "Classificado por IA";
-            var isClassified = isHumanValidated || isAIClassified;
-            
-            // Verificar se há classificações adicionais (verificando o tooltip na coluna de Área de Aplicação)
-            var hasAdditionalClassifications = false;
-            
-            // Verificar se o span de Área de Aplicação tem tooltip com classificações adicionais
-            var areaAplicacaoSpan = $(this).find("td:nth-child(6) .project-code[data-bs-toggle='tooltip']");
-            
-            if (areaAplicacaoSpan.length > 0) {
-                // Se o span tiver um tooltip, consideramos que tem classificações adicionais
-                hasAdditionalClassifications = true;
-            }
-            
-            // Definir atributos para os diferentes tipos de classificação
-            $(this).attr("data-human-validated", isHumanValidated);
-            $(this).attr("data-ai-classified", isAIClassified);
-            $(this).attr("data-not-classified", !isHumanValidated && !isAIClassified);
-            
-            // Log para depuração
-            if (hasAdditionalClassifications && !isClassified) {
-                console.log("Projeto com apenas classificações adicionais:", $(this).data("href"));
-            }
-        });
-        
         // Função para filtrar projetos por texto
         $("#searchInput").on("keyup", function() {
-            applyFilters();
+            // Usar debounce para evitar muitas requisições
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(function() {
+                // Resetar paginação e recarregar projetos
+                resetAndReload();
+            }, 500);
         });
         
-        // Função para filtrar por categorização
-        $("#categoryFilter").on("change", function() {
-            // Aplicar filtros
-            applyFilters();
+        // Função para filtrar por categorização e tec verde
+        $("#categoryFilter, #tecVerdeFilter").on("change", function() {
+            // Resetar paginação e recarregar projetos
+            resetAndReload();
         });
+        
+        // Função para resetar paginação e recarregar projetos
+        function resetAndReload() {
+            // Limpar a tabela
+            $("#projectsTable tbody").empty();
+            
+            // Resetar variáveis de paginação
+            currentPage = 1;
+            hasNextPage = true;
+            nextPage = 1;
+            
+            // Esconder mensagem de fim de resultados
+            $('#end-of-results').hide();
+            
+            // Carregar projetos com os novos filtros
+            loadMoreProjects();
+        }
         
         // Função para aplicar todos os filtros ativos
         function applyFilters() {
@@ -625,23 +665,43 @@
             // Obter filtro de categorização selecionado
             var categorizationFilter = $("#categoryFilter").val();
             
+            // Obter filtro de Tec Verde selecionado
+            var tecVerdeFilter = $("#tecVerdeFilter").val();
+            
             // Aplicar filtros combinados
             $("#projectsTable tbody tr").not("#noResults").each(function() {
                 var row = $(this);
                 var textMatch = row.text().toLowerCase().indexOf(textValue) > -1;
                 var categorizationMatch = true;
+                var tecVerdeMatch = true;
                 
-                // Verificar filtro de categorização
-                if (categorizationFilter === "uncategorized") {
-                    categorizationMatch = row.attr("data-not-classified") === "true";
-                } else if (categorizationFilter === "ai_classified") {
-                    categorizationMatch = row.attr("data-ai-classified") === "true";
-                } else if (categorizationFilter === "human_validated") {
-                    categorizationMatch = row.attr("data-human-validated") === "true";
+                // Verificar filtro de categorização diretamente pelo texto do badge
+                if (categorizationFilter !== "all") {
+                    var badgeText = row.find(".badge").first().text();
+                    
+                    if (categorizationFilter === "uncategorized") {
+                        categorizationMatch = badgeText === "Não Classificado";
+                    } else if (categorizationFilter === "ai_classified") {
+                        categorizationMatch = badgeText === "Classificado por IA";
+                    } else if (categorizationFilter === "human_validated") {
+                        categorizationMatch = badgeText === "Validado por Humano";
+                    }
+                }
+                
+                // Verificar filtro de Tec Verde
+                if (tecVerdeFilter !== "all") {
+                    // Obter o texto da célula Tec Verde (7ª coluna)
+                    var tecVerdeText = row.find("td:nth-child(7) .project-code").text().trim();
+                    
+                    if (tecVerdeFilter === "sim") {
+                        tecVerdeMatch = tecVerdeText === "Sim";
+                    } else if (tecVerdeFilter === "nao") {
+                        tecVerdeMatch = tecVerdeText === "Não";
+                    }
                 }
                 
                 // Mostrar ou esconder linha com base nos filtros combinados
-                row.toggle(textMatch && categorizationMatch);
+                row.toggle(textMatch && categorizationMatch && tecVerdeMatch);
             });
             
             // Atualizar contador de projetos visíveis
@@ -716,45 +776,282 @@
             }
         });
         
-        // Função para tornar as linhas clicáveis (modificado para ignorar a primeira coluna)
-        $(".clickable-row").click(function(e) {
-            // Se o clique foi na primeira coluna, não redirecionar
-            if ($(e.target).closest(".copy-code-cell").length > 0) {
-                return;
-            }
-            
-            // Verificar o status do projeto
-            const isHumanValidated = $(this).attr("data-human-validated") === "true";
-            const isAIClassified = $(this).attr("data-ai-classified") === "true";
-            
-            // Mostrar o overlay de carregamento antes de redirecionar
-            if (typeof aiLoading !== 'undefined') {
-                if (isHumanValidated) {
-                    // Mensagem para projetos validados por humano
-                    aiLoading.show(
-                        "Carregando projeto...", 
-                        "Abrindo projeto com classificação validada por humano"
-                    );
-                } else if (isAIClassified) {
-                    // Mensagem para projetos classificados por IA
-                    aiLoading.show(
-                        "Carregando projeto...", 
-                        "Abrindo projeto com classificação gerada pela IA"
-                    );
-                } else {
-                    // Mensagem para projetos não classificados
-                    aiLoading.show(
-                        "Carregando projeto...", 
-                        "Aguarde enquanto a IA analisa e prepara as sugestões de classificação"
-                    );
+        // Variáveis para o infinite scroll
+        var currentPage = 1;
+        var hasNextPage = false;
+        var nextPage = null;
+        var isLoading = false;
+        var searchTimeout;
+        
+        // Inicializar valores de paginação a partir de atributos de dados
+        if ($("#pagination-data").length) {
+            currentPage = parseInt($("#pagination-data").data("current-page") || 1);
+            hasNextPage = $("#pagination-data").data("has-next") === true;
+            nextPage = $("#pagination-data").data("next-page") || null;
+        }
+        
+        // Função para inicializar eventos de clique em linhas da tabela
+        function initClickableRows() {
+            // Função para tornar as linhas clicáveis (modificado para ignorar a primeira coluna)
+            $(".clickable-row").off('click').on('click', function(e) {
+                // Se o clique foi na primeira coluna, não redirecionar
+                if ($(e.target).closest(".copy-code-cell").length > 0) {
+                    return;
                 }
-            }
+                
+                // Verificar o status do projeto diretamente pelo texto do badge
+                var badgeText = $(this).find(".badge").first().text();
+                var isHumanValidated = badgeText === "Validado por Humano";
+                var isAIClassified = badgeText === "Classificado por IA";
+                
+                // Mostrar o overlay de carregamento antes de redirecionar
+                if (typeof aiLoading !== 'undefined') {
+                    if (isHumanValidated) {
+                        // Mensagem para projetos validados por humano
+                        aiLoading.show(
+                            "Carregando projeto...", 
+                            "Abrindo projeto com classificação validada por humano"
+                        );
+                    } else if (isAIClassified) {
+                        // Mensagem para projetos classificados por IA
+                        aiLoading.show(
+                            "Carregando projeto...", 
+                            "Abrindo projeto com classificação gerada pela IA"
+                        );
+                    } else {
+                        // Mensagem para projetos não classificados
+                        aiLoading.show(
+                            "Carregando projeto...", 
+                            "Aguarde enquanto a IA analisa e prepara as sugestões de classificação"
+                        );
+                    }
+                }
+                
+                // Redirecionar após um pequeno delay para garantir que o overlay seja exibido
+                setTimeout(() => {
+                    window.location = $(this).data("href");
+                }, 100);
+            });
             
-            // Redirecionar após um pequeno delay para garantir que o overlay seja exibido
-            setTimeout(() => {
-                window.location = $(this).data("href");
-            }, 100);
+            // Reinicializar eventos de cópia de código
+            $(".copy-code-cell").off('click').on('click', function(e) {
+                e.stopPropagation(); // Impedir que o evento seja propagado para a linha
+                
+                const code = $(this).data("code");
+                if (code) {
+                    // Copiar o código para a área de transferência
+                    navigator.clipboard.writeText(code).then(function() {
+                        // Criar e mostrar o tooltip de confirmação
+                        const cell = $(e.currentTarget);
+                        
+                        // Verificar se o tooltip já existe
+                        if (cell.find(".copy-tooltip").length === 0) {
+                            cell.append('<div class="copy-tooltip"><i class="fas fa-check"></i> Copiado!</div>');
+                            
+                            // Remover o tooltip após 2 segundos
+                            setTimeout(function() {
+                                cell.find(".copy-tooltip").fadeOut(200, function() {
+                                    $(this).remove();
+                                });
+                            }, 2000);
+                        }
+                    }).catch(function(err) {
+                        console.error('Erro ao copiar texto: ', err);
+                    });
+                }
+            });
+            
+            // Reinicializar tooltips para novos elementos
+            var newTooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]:not(.tooltip-initialized)'));
+            newTooltipTriggerList.forEach(function(tooltipTriggerEl) {
+                tooltipTriggerEl.classList.add('tooltip-initialized');
+                new bootstrap.Tooltip(tooltipTriggerEl, {
+                    placement: 'top',
+                    trigger: 'hover',
+                    html: true,
+                    container: 'body',
+                    boundary: 'window'
+                });
+            });
+            
+            // Formatar as datas de contrato para novos elementos
+            $('.data-contrato:not(.formatted)').each(function() {
+                const timestamp = $(this).data('timestamp');
+                $(this).text(formatarDataBrasileira(timestamp));
+                $(this).addClass('formatted');
+            });
+        }
+        
+        // Função para carregar mais projetos
+        function loadMoreProjects() {
+            if (isLoading || !hasNextPage && nextPage !== 1) return;
+            
+            isLoading = true;
+            $('.loading-more').show();
+            
+            // Obter parâmetros de filtro atuais
+            var searchValue = $("#searchInput").val();
+            var filterValue = $("#categoryFilter").val();
+            var tecVerdeValue = $("#tecVerdeFilter").val();
+            
+            // Fazer requisição AJAX para obter mais projetos
+            $.ajax({
+                url: '/projects',
+                type: 'GET',
+                data: {
+                    page: nextPage || 1,
+                    search: searchValue,
+                    filter: filterValue,
+                    tecverde: tecVerdeValue,
+                    ajax: 1
+                },
+                dataType: 'json',
+                success: function(data) {
+                    // Esconder indicador de carregamento
+                    $('.loading-more').hide();
+                    
+                    if (data.projects && data.projects.length > 0) {
+                        // Adicionar novos projetos à tabela
+                        appendProjects(data.projects);
+                        
+                        // Atualizar variáveis de paginação
+                        currentPage = data.next_page ? data.next_page - 1 : currentPage + 1;
+                        hasNextPage = data.has_next;
+                        nextPage = data.next_page;
+                        
+                        // Inicializar eventos para as novas linhas
+                        initClickableRows();
+                        
+                        // Aplicar filtros aos novos projetos
+                        applyFilters();
+                    } else {
+                        // Não há mais projetos para carregar
+                        hasNextPage = false;
+                        $('#end-of-results').show();
+                    }
+                    
+                    isLoading = false;
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro ao carregar mais projetos:', error);
+                    $('.loading-more').hide();
+                    isLoading = false;
+                }
+            });
+        }
+        
+        // Função para adicionar projetos à tabela
+        function appendProjects(projects) {
+            var tbody = $("#projectsTable tbody");
+            
+            projects.forEach(function(project) {
+                var row = $('<tr class="clickable-row"></tr>');
+                row.attr('data-href', '/categorize/' + project.codigo_projeto);
+                
+                // Coluna do código do projeto
+                var codeCell = $('<td class="copy-code-cell"></td>');
+                codeCell.attr('data-code', project.codigo_projeto);
+                if (project.codigo_projeto) {
+                    codeCell.append('<span class="project-code">' + project.codigo_projeto + '</span>');
+                } else {
+                    codeCell.append('<span class="text-muted">-</span>');
+                }
+                row.append(codeCell);
+                
+                // Coluna de status
+                var statusCell = $('<td></td>');
+                if (project.human_validated) {
+                    statusCell.append('<span class="badge bg-success rounded-pill">Validado por Humano</span>');
+                } else if (project.ai_classified) {
+                    statusCell.append('<span class="badge bg-info rounded-pill">Classificado por IA</span>');
+                } else {
+                    statusCell.append('<span class="badge bg-warning rounded-pill">Não Classificado</span>');
+                }
+                row.append(statusCell);
+                
+                // Coluna UE
+                var ueCell = $('<td></td>');
+                if (project.unidade_embrapii) {
+                    var ueSpan = $('<span class="project-code"></span>');
+                    ueSpan.attr('data-bs-toggle', 'tooltip');
+                    ueSpan.attr('title', project.unidade_embrapii);
+                    ueSpan.text(project.unidade_embrapii);
+                    ueCell.append(ueSpan);
+                } else {
+                    ueCell.append('<span class="text-muted">-</span>');
+                }
+                row.append(ueCell);
+                
+                // Coluna Data
+                var dateCell = $('<td></td>');
+                if (project.data_contrato) {
+                    var dateSpan = $('<span class="project-code data-contrato"></span>');
+                    dateSpan.attr('data-timestamp', project.data_contrato);
+                    dateSpan.text(project.data_contrato);
+                    dateCell.append(dateSpan);
+                } else {
+                    dateCell.append('<span class="text-muted">-</span>');
+                }
+                row.append(dateCell);
+                
+                // Coluna Título
+                var titleCell = $('<td></td>');
+                var titleSpan = $('<span class="project-title"></span>');
+                titleSpan.attr('data-bs-toggle', 'tooltip');
+                titleSpan.attr('title', project.titulo);
+                titleSpan.text(project.titulo);
+                titleCell.append(titleSpan);
+                row.append(titleCell);
+                
+                // Coluna Área de Aplicação
+                var areaCell = $('<td></td>');
+                if (project._aia_n1_macroarea || project._aia_n2_segmento) {
+                    var areaText = '';
+                    if (project._aia_n1_macroarea && project._aia_n2_segmento) {
+                        areaText = project._aia_n1_macroarea + ', ' + project._aia_n2_segmento;
+                    } else if (project._aia_n1_macroarea) {
+                        areaText = project._aia_n1_macroarea;
+                    } else if (project._aia_n2_segmento) {
+                        areaText = project._aia_n2_segmento;
+                    }
+                    areaCell.append('<span class="project-code">' + areaText + '</span>');
+                } else {
+                    areaCell.append('<span class="text-muted">-</span>');
+                }
+                row.append(areaCell);
+                
+                // Coluna Tec Verde
+                var tecVerdeCell = $('<td></td>');
+                if (project.tecverde_se_aplica === "1" || project.tecverde_se_aplica === 1 || project.tecverde_se_aplica === true) {
+                    if (project.tecverde_classe && project.tecverde_subclasse) {
+                        var tecVerdeSpan = $('<span class="project-code"></span>');
+                        tecVerdeSpan.attr('data-bs-toggle', 'tooltip');
+                        tecVerdeSpan.attr('data-bs-html', 'true');
+                        tecVerdeSpan.attr('title', "<div class='text-start'><strong>Classe:</strong> " + project.tecverde_classe + "<br><strong>Subclasse:</strong> " + project.tecverde_subclasse + "</div>");
+                        tecVerdeSpan.text('Sim');
+                        tecVerdeCell.append(tecVerdeSpan);
+                    } else {
+                        tecVerdeCell.append('<span class="project-code">Sim</span>');
+                    }
+                } else {
+                    tecVerdeCell.append('<span class="project-code">Não</span>');
+                }
+                row.append(tecVerdeCell);
+                
+                // Adicionar a linha à tabela
+                tbody.append(row);
+            });
+        }
+        
+        // Detectar quando o usuário rola até o final da página
+        $(window).scroll(function() {
+            if ($(window).scrollTop() + $(window).height() > $(document).height() - 200) {
+                loadMoreProjects();
+            }
         });
+        
+        // Inicializar eventos de clique para as linhas iniciais
+        initClickableRows();
     });
 </script>
 {% endblock %}

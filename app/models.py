@@ -160,7 +160,6 @@ class TecnologiaVerde(db.Model):
 
 class CategoriaLista(db.Model):
     __tablename__ = 'categoria_listas'
-    __table_args__ = {'schema': 'gepes'}
     
     id = db.Column(db.Integer, primary_key=True)
     tipo = db.Column(db.Text, nullable=False)
@@ -275,7 +274,6 @@ class AISuggestion(db.Model):
 
 class AIRating(db.Model):
     __tablename__ = 'ai_ratings'
-    __table_args__ = {'schema': 'gepes'}
     
     id = db.Column(db.Integer, primary_key=True)
     id_projeto = db.Column(db.Integer, db.ForeignKey('gepes.projetos.id'), nullable=False)
