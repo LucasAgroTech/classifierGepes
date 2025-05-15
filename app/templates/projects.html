@@ -1,21 +1,27 @@
 {% extends "base.html" %}
 
-{% block title %}gepesClassifier v1.0{% endblock %}
+{% block title %}gepesClassifier v1.1{% endblock %}
 
 {% block extra_css %}
 <style>
     .projects-header {
         padding-bottom: 1.5rem;
-        margin-bottom: 2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
     
-    .header-right {
+    /* Estilos para o container e linha de filtros */
+    .filters-container {
+        width: 100%;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filters-row {
         display: flex;
         align-items: center;
-        gap: 0rem;
+        width: 100%;
+        position: relative;
     }
     
     .projects-info {
@@ -87,7 +93,8 @@
     
     .search-container {
         position: relative;
-        width: 300px;
+        flex: 1;
+        min-width: 200px;
     }
     
     .search-container i {
@@ -104,6 +111,7 @@
         border: 1px solid var(--input-border);
         background-color: var(--input-bg);
         transition: all 0.3s ease;
+        width: 100%;
     }
     
     .search-input:focus {
@@ -347,6 +355,46 @@
         background-color: #198754 !important;
         color: white;
     }
+    
+    /* Estilos para o overlay de carregamento da tabela */
+    .table-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        border-radius: 12px;
+        display: none;
+    }
+    
+    .loading-spinner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--primary-dark);
+        color: white;
+        padding: 1.5rem 2rem;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .loading-spinner i {
+        font-size: 2rem;
+        margin-bottom: 0.75rem;
+        animation: spin 1s linear infinite;
+    }
+    
+    .loading-text {
+        font-size: 1rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+    }
 </style>
 {% endblock %}
 
@@ -359,7 +407,7 @@
         <div class="titles-container">
             <h2 class="projects-title">
                 gepesClassifier
-                <span class="version-badge">v1.0</span>
+                <span class="version-badge">v1.1</span>
                 <span class="project-count-badge">
                     <i class="fas fa-folder count-icon"></i>
                     {{ "{:,}".format(total_projects).replace(',', '.') }}
@@ -371,29 +419,33 @@
             </p>
         </div>
     </div>
-    <div class="header-right">
-        <div class="filter-container">
-            <i class="fas fa-filter"></i>
-            <select id="categoryFilter" class="form-control filter-select">
-                <option value="all">Todos os projetos</option>
-                <option value="uncategorized">Não Classificado</option>
-                <option value="ai_classified">Classificado por IA</option>
-                <option value="human_validated">Validado por Humano</option>
-            </select>
-        </div>
-        <div class="filter-container">
-            <i class="fas fa-leaf"></i>
-            <select id="tecVerdeFilter" class="form-control filter-select">
-                <option value="all">Todas</option>
-                <option value="sim">Sim</option>
-                <option value="nao">Não</option>
-            </select>
-        </div>
-        <div class="search-container">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" class="form-control search-input" placeholder="Buscar projeto...">
-        </div>
+</div>
+
+<!-- Filtros abaixo do header -->
+<div class="filters-container">
+  <div class="filters-row">
+    <div class="filter-container">
+        <i class="fas fa-filter"></i>
+        <select id="categoryFilter" class="form-control filter-select">
+            <option value="all">Todos os projetos</option>
+            <option value="uncategorized">Não Classificado</option>
+            <option value="ai_classified">Classificado por IA</option>
+            <option value="human_validated">Validado por Humano</option>
+        </select>
     </div>
+    <div class="filter-container">
+        <i class="fas fa-leaf"></i>
+        <select id="tecVerdeFilter" class="form-control filter-select">
+            <option value="all">Todas</option>
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+        </select>
+    </div>
+    <div class="search-container">
+        <i class="fas fa-search"></i>
+        <input type="text" id="searchInput" class="form-control search-input" placeholder="Buscar projeto...">
+    </div>
+  </div>
 </div>
 
 <!-- Elemento oculto para armazenar dados de paginação -->
@@ -411,7 +463,14 @@
     Todos os projetos foram carregados.
 </div>
 
-<div class="card project-table-card">
+<div class="card project-table-card position-relative">
+    <!-- Overlay de carregamento para filtragem e carregamento de projetos -->
+    <div class="table-loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner"></i>
+            <span class="loading-text">Carregando projetos...</span>
+        </div>
+    </div>
     <div class="table-responsive" style="overflow-x: auto; width: 100%;">
         <table class="table" id="projectsTable" style="width: auto; min-width: 100%;">
             <thead>
@@ -642,6 +701,9 @@
         
         // Função para resetar paginação e recarregar projetos
         function resetAndReload() {
+            // Mostrar overlay de carregamento
+            $('.table-loading-overlay').fadeIn(200);
+            
             // Limpar a tabela
             $("#projectsTable tbody").empty();
             
@@ -668,6 +730,10 @@
             // Obter filtro de Tec Verde selecionado
             var tecVerdeFilter = $("#tecVerdeFilter").val();
             
+            // Contar projetos visíveis antes da filtragem
+            var totalVisibleBefore = $("#projectsTable tbody tr:visible").not("#noResults").length;
+            console.log("Projetos visíveis antes da filtragem:", totalVisibleBefore);
+            
             // Aplicar filtros combinados
             $("#projectsTable tbody tr").not("#noResults").each(function() {
                 var row = $(this);
@@ -688,21 +754,33 @@
                     }
                 }
                 
-                // Verificar filtro de Tec Verde
+                // Verificar filtro de Tec Verde usando abordagem booleana
                 if (tecVerdeFilter !== "all") {
-                    // Obter o texto da célula Tec Verde (7ª coluna)
-                    var tecVerdeText = row.find("td:nth-child(7) .project-code").text().trim();
+                    // Obter o valor booleano da célula Tec Verde (7ª coluna)
+                    var tecVerdeCell = row.find("td:nth-child(7)");
+                    var isTecVerde = false;
                     
+                    // Verificar se a célula contém "Sim" - isso indica que tecverde_se_aplica é true
+                    if (tecVerdeCell.find(".project-code").text().trim() === "Sim") {
+                        isTecVerde = true;
+                    }
+                    
+                    // Aplicar o filtro baseado no valor booleano
                     if (tecVerdeFilter === "sim") {
-                        tecVerdeMatch = tecVerdeText === "Sim";
+                        tecVerdeMatch = isTecVerde === true;
                     } else if (tecVerdeFilter === "nao") {
-                        tecVerdeMatch = tecVerdeText === "Não";
+                        tecVerdeMatch = isTecVerde === false;
                     }
                 }
                 
                 // Mostrar ou esconder linha com base nos filtros combinados
-                row.toggle(textMatch && categorizationMatch && tecVerdeMatch);
+                var shouldShow = textMatch && categorizationMatch && tecVerdeMatch;
+                row.toggle(shouldShow);
             });
+            
+            // Contar projetos visíveis após a filtragem
+            var totalVisibleAfter = $("#projectsTable tbody tr:visible").not("#noResults").length;
+            console.log("Projetos visíveis após a filtragem:", totalVisibleAfter);
             
             // Atualizar contador de projetos visíveis
             updateProjectCount();
@@ -714,7 +792,7 @@
         // Função para atualizar o contador de projetos
         function updateProjectCount() {
             var visibleRows = $("#projectsTable tbody tr:visible").not("#noResults").length;
-            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + totalProjects.toLocaleString('pt-BR').replace(',', '.'));
+            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + visibleRows.toLocaleString('pt-BR').replace(',', '.'));
         }
         
         // Função para verificar se não há resultados e mostrar mensagem
@@ -887,12 +965,26 @@
             if (isLoading || !hasNextPage && nextPage !== 1) return;
             
             isLoading = true;
-            $('.loading-more').show();
+            
+            // Mostrar indicadores de carregamento
+            if (nextPage === 1) {
+                // Se for a primeira página, mostrar o overlay principal
+                $('.table-loading-overlay').fadeIn(200);
+            } else {
+                // Se for carregamento de mais projetos, mostrar o indicador de "carregando mais"
+                $('.loading-more').show();
+            }
             
             // Obter parâmetros de filtro atuais
             var searchValue = $("#searchInput").val();
             var filterValue = $("#categoryFilter").val();
             var tecVerdeValue = $("#tecVerdeFilter").val();
+            
+            console.log("Carregando projetos com filtros:", {
+                search: searchValue,
+                filter: filterValue,
+                tecverde: tecVerdeValue
+            });
             
             // Fazer requisição AJAX para obter mais projetos
             $.ajax({
@@ -907,8 +999,9 @@
                 },
                 dataType: 'json',
                 success: function(data) {
-                    // Esconder indicador de carregamento
+                    // Esconder indicadores de carregamento
                     $('.loading-more').hide();
+                    $('.table-loading-overlay').fadeOut(200);
                     
                     if (data.projects && data.projects.length > 0) {
                         // Adicionar novos projetos à tabela
@@ -934,7 +1027,11 @@
                 },
                 error: function(xhr, status, error) {
                     console.error('Erro ao carregar mais projetos:', error);
+                    
+                    // Esconder indicadores de carregamento em caso de erro
                     $('.loading-more').hide();
+                    $('.table-loading-overlay').fadeOut(200);
+                    
                     isLoading = false;
                 }
             });

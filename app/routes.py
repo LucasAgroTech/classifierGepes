@@ -256,6 +256,7 @@ def projects():
         per_page = 20  # Reduzido para melhor desempenho com infinite scroll
         search = request.args.get('search', '')
         filter_type = request.args.get('filter', 'all')
+        tecverde_filter = request.args.get('tecverde', 'all')
         is_ajax = request.args.get('ajax', '0') == '1'
         
         # Carregar projetos com eager loading para evitar consultas N+1
@@ -296,6 +297,15 @@ def projects():
             elif filter_type == 'human_validated':
                 # Projetos validados por humano (tem categoria)
                 query = query.join(Categoria)
+        
+        # Aplicar filtro de Tec Verde se fornecido
+        if tecverde_filter != 'all':
+            if tecverde_filter == 'sim':
+                # Projetos com Tec Verde = True
+                query = query.filter(Projeto.tecverde_se_aplica == True)
+            elif tecverde_filter == 'nao':
+                # Projetos com Tec Verde = False
+                query = query.filter(Projeto.tecverde_se_aplica == False)
         
         # Executar a consulta com paginação
         projects_query = query.paginate(page=page, per_page=per_page, error_out=False)
