@@ -210,10 +210,12 @@ class Log(db.Model):
     def data(self):
         """
         Propriedade para compatibilidade com código que acessa log.data.
-        Retorna o valor de data_acao como string formatada.
+        Retorna o valor de data_acao como string formatada, convertida para o horário de Brasília (UTC-3).
         """
         if self.data_acao:
-            return self.data_acao.strftime('%Y-%m-%d %H:%M:%S')
+            # Ajusta o horário UTC para o horário de Brasília (UTC-3)
+            hora_brasil = self.data_acao.replace(hour=max(0, self.data_acao.hour - 3))
+            return hora_brasil.strftime('%Y-%m-%d %H:%M:%S')
         return None
     
     def __repr__(self):

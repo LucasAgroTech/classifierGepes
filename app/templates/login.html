@@ -270,13 +270,14 @@
             {% endif %}
             
             <form method="POST" action="{{ url_for('main.login') }}">
+                {{ form.hidden_tag() }}
                 {% if is_system_session %}
                 <input type="hidden" name="session_type" value="sistema">
                 {% endif %}
                 <div class="form-floating mb-4">
-                    <input type="email" class="form-control" id="username" name="username" required 
+                    <input type="email" class="form-control" id="email" name="email" required 
                            placeholder="Usuário">
-                    <label for="username"><i class="fas fa-envelope me-2"></i>Usuário</label>
+                    <label for="email"><i class="fas fa-envelope me-2"></i>Usuário</label>
                 </div>
                 
                 <div class="form-floating mb-4">

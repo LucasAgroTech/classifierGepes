@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import Usuario, Projeto, Categoria, TecnologiaVerde, CategoriaLista, ClassificacaoAdicional, Log, AISuggestion, db
+from app.models import Usuario, Projeto, Categoria, TecnologiaVerde, CategoriaLista, ClassificacaoAdicional, Log, AISuggestion, AIRating, db
 from app.forms import LoginForm, CategorizacaoForm, SettingsForm
 from app.ai_integration import OpenAIClient
 from config import Config
@@ -283,15 +283,10 @@ def projects():
         
         # Aplicar filtro de categoria se não for 'all'
         if filter_type == 'human_validated':
-            # Projetos validados por humano (tem avaliações não automáticas)
-            from sqlalchemy import exists
-            from app.models import AIRating
-            query = query.filter(
-                exists().where(
-                    (AIRating.project_id == Projeto.id) & 
-                    (AIRating.user_id != 'sistema.automatico@embrapii.org.br')
-                )
-            )
+            # Projetos validados por humano (tem categoria)
+            query = query.filter(Projeto.categoria != None)
+            # Adicionar log para depuração
+            logger.info(f"Aplicando filtro para projetos validados por humano")
         elif filter_type == 'ai_classified':
             # Projetos classificados por IA (tem sugestões da IA)
             from sqlalchemy import exists
@@ -299,8 +294,12 @@ def projects():
                 exists().where(AISuggestion.id_projeto == Projeto.id)
             )
         elif filter_type == 'uncategorized':
-            # Projetos não classificados (não tem categoria)
-            query = query.filter(Projeto.categoria == None)
+            # Projetos não classificados (não tem categoria e não tem sugestões da IA)
+            from sqlalchemy import exists, not_
+            query = query.filter(
+                Projeto.categoria == None,
+                not_(exists().where(AISuggestion.id_projeto == Projeto.id))
+            )
         
         # Executar a consulta com paginação
         projects_query = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -319,27 +318,44 @@ def projects():
         ai_suggestions_by_project = {s.id_projeto: s for s in ai_suggestions}
         ai_suggestions_dict = [suggestion.to_dict() for suggestion in ai_suggestions]
         
-        # Otimizar a verificação de cada projeto
+        # Buscar todos os projetos que têm avaliações feitas por humanos
+        from sqlalchemy import func
+        from app.models import AIRating
+        
+        # Criar um conjunto de IDs de projetos com avaliações humanas para busca rápida
+        human_rated_project_ids = set()
+        
+        # Verificar cada projeto individualmente para garantir que todos os projetos com avaliações humanas sejam incluídos
         for project in projects_data:
-            # Verificar se o projeto tem alguma avaliação da IA feita por humano
-            # Usando list comprehension em vez de any() para melhor performance
-            human_ratings = [
-                rating for rating in project.ai_ratings 
-                if rating.user_id != 'sistema.automatico@embrapii.org.br'
-            ]
-            project.human_validated = len(human_ratings) > 0
+            # Verificar se o projeto tem categoria (já foi classificado)
+            project.categorizado = project.categoria is not None
             
             # Verificar se o projeto tem sugestão da IA usando o dicionário
             project.ai_classified = project.id in ai_suggestions_by_project
             
-            # Verificar se o projeto já foi categorizado
-            project.categorizado = project.categoria is not None
+            # Verificar se o projeto tem alguma avaliação da IA feita por humano
+            human_ratings_count = AIRating.query.filter(
+                AIRating.id_projeto == project.id,
+                AIRating.user_id != 'sistema.automatico@embrapii.org.br'
+            ).count()
+            
+            # Marcar o projeto como validado por humano se tiver pelo menos uma avaliação humana
+            project.human_validated = project.categorizado
+            
+            # Adicionar ao conjunto de IDs para referência futura
+            if project.human_validated:
+                human_rated_project_ids.add(project.id)
+                
+            # Log para depuração
+            if project.human_validated:
+                logger.info(f"Projeto {project.codigo_projeto} (ID: {project.id}) marcado como validado por humano")
         
         return render_template(
             'projects.html', 
             projects=projects_data, 
             ai_suggestions=ai_suggestions_dict,
-            pagination=projects_query
+            pagination=projects_query,
+            total_projects=projects_query.total  # Adicionar o total de projetos que correspondem ao filtro
         )
         
     except Exception as e:
@@ -441,8 +457,9 @@ def categorize(project_id):
             dominio_outros_str = ';'.join(dominio_outros_values) if dominio_outros_values else None
             observacoes = form_data.get('observacoes')
             
-            # Processar dados de tecnologia verde
-            tecverde_se_aplica = form_data.get('tecverde_se_aplica')
+            # Processar dados de tecnologia verde (apenas para leitura, não serão salvos)
+            tecverde_se_aplica_str = form_data.get('tecverde_se_aplica')
+            tecverde_se_aplica = bool(tecverde_se_aplica_str == '1' or (tecverde_se_aplica_str and tecverde_se_aplica_str.lower() == 'sim'))
             tecverde_classe = form_data.get('tecverde_classe')
             tecverde_subclasse = form_data.get('tecverde_subclasse')
             tecverde_observacoes = form_data.get('tecverde_observacoes')
@@ -460,15 +477,11 @@ def categorize(project_id):
                 except json.JSONDecodeError:
                     logger.error("Erro ao decodificar classificações adicionais")
             
-            # Atualizar dados do projeto
+            # Atualizar dados do projeto (exceto tecnologias verdes)
             project._aia_n1_macroarea = microarea
             project._aia_n2_segmento = segmento
             project._aia_n3_dominio_afeito = dominio_str
             project._aia_n3_dominio_outro = dominio_outros_str
-            project.tecverde_se_aplica = tecverde_se_aplica == '1'
-            project.tecverde_classe = tecverde_classe if tecverde_se_aplica == '1' else ''
-            project.tecverde_subclasse = tecverde_subclasse if tecverde_se_aplica == '1' else ''
-            project.tecverde_observacoes = tecverde_observacoes
             
             # Verificar/criar registro de Categoria
             categoria = Categoria.query.filter_by(id_projeto=project.id).first()
@@ -482,18 +495,6 @@ def categorize(project_id):
             categoria.dominio = dominio_str
             categoria.dominio_outros = dominio_outros_str
             categoria.observacoes = observacoes
-            
-            # Verificar/criar registro de TecnologiaVerde
-            tecverde = TecnologiaVerde.query.filter_by(id_projeto=project.id).first()
-            if not tecverde:
-                tecverde = TecnologiaVerde(id_projeto=project.id)
-                db.session.add(tecverde)
-            
-            # Atualizar tecnologia verde
-            tecverde.se_aplica = tecverde_se_aplica == '1'
-            tecverde.classe = tecverde_classe if tecverde_se_aplica == '1' else ''
-            tecverde.subclasse = tecverde_subclasse if tecverde_se_aplica == '1' else ''
-            tecverde.observacoes = tecverde_observacoes
             
             # Limpar classificações adicionais existentes
             ClassificacaoAdicional.query.filter_by(id_projeto=project.id).delete()
@@ -525,6 +526,9 @@ def categorize(project_id):
         # Obter listas de categorias
         categories_lists = _get_categories_lists()
         
+        # Verificar se o projeto tem dados salvos pelo usuário
+        user_has_saved_data = has_user_saved_data(project.id)
+        
         # Obter categorização existente
         existing = {
             'microarea': project._aia_n1_macroarea,
@@ -534,7 +538,8 @@ def categorize(project_id):
             'tecverde_se_aplica': '1' if project.tecverde_se_aplica else '0',
             'tecverde_classe': project.tecverde_classe,
             'tecverde_subclasse': project.tecverde_subclasse,
-            'tecverde_observacoes': project.tecverde_observacoes
+            'tecverde_observacoes': project.tecverde_observacoes,
+            'user_has_saved_data': user_has_saved_data
         }
         
         # Buscar categoria para obter observações
@@ -618,7 +623,8 @@ def categorize(project_id):
             project_logs=project_logs,
             tecverde_classes=tecverde_classes,
             tecverde_subclasses=tecverde_subclasses,
-            ai_ratings=ai_ratings
+            ai_ratings=ai_ratings,
+            user_has_saved_data=user_has_saved_data
         )
         
     except Exception as e:
@@ -643,7 +649,8 @@ def save_tecverde(project_id):
         
         # Normalizar valor de tecverde_se_aplica para booleano
         tecverde_se_aplica_str = data.get('tecverde_se_aplica', '')
-        tecverde_se_aplica = tecverde_se_aplica_str == '1' or tecverde_se_aplica_str.lower() == 'sim'
+        # Garantir que tecverde_se_aplica seja sempre um booleano (True ou False), nunca None
+        tecverde_se_aplica = bool(tecverde_se_aplica_str == '1' or (tecverde_se_aplica_str and tecverde_se_aplica_str.lower() == 'sim'))
         
         # Atualizar dados do projeto
         project.tecverde_se_aplica = tecverde_se_aplica
@@ -1234,3 +1241,45 @@ def lists():
         flash(f'Erro: {str(e)}', 'error')
         logger.error(f"Erro nas listas: {str(e)}")
         return redirect(url_for('main.projects'))
+
+# Função para verificar se um projeto tem classificações salvas pelo usuário
+def has_user_saved_data(project_id):
+    """
+    Verifica se um projeto tem classificações salvas por um usuário (não pelo sistema).
+    
+    Args:
+        project_id: ID do projeto a verificar
+        
+    Returns:
+        bool: True se o projeto tem classificações salvas pelo usuário, False caso contrário
+    """
+    try:
+        # Verificar se há logs indicando que o usuário modificou os dados
+        user_modified_logs = Log.query.filter_by(
+            id_projeto=project_id,
+            usuario_modificou=True
+        ).count()
+        
+        if user_modified_logs > 0:
+            return True
+            
+        # Verificar se há avaliações da IA feitas por humanos
+        human_ratings = AIRating.query.filter(
+            AIRating.id_projeto == project_id,
+            AIRating.user_id != 'sistema.automatico@embrapii.org.br'
+        ).count()
+        
+        if human_ratings > 0:
+            return True
+            
+        # Verificar se há categoria definida e não é apenas sugestão da IA
+        categoria = Categoria.query.filter_by(id_projeto=project_id).first()
+        if categoria:
+            # Se há registro em Categoria, considerar como salvo pelo usuário
+            # já que a inserção em Categoria só ocorre quando o usuário salva
+            return True
+            
+        return False
+    except Exception as e:
+        logger.error(f"Erro ao verificar dados salvos pelo usuário: {str(e)}")
+        return False

@@ -475,6 +475,9 @@
                         <form method="POST">
                             <input type="hidden" name="used_ai" id="used_ai" value="{% if ai_suggestion %}true{% else %}false{% endif %}">
                             <input type="hidden" name="user_modified" id="user_modified" value="{% if existing %}true{% else %}false{% endif %}">
+                            <input type="hidden" id="user_has_saved_data" value="{{ 'true' if user_has_saved_data else 'false' }}">
+                            <input type="hidden" id="db_tecverde_se_aplica" value="{{ project.tecverde_se_aplica|tojson }}">
+                            <input type="hidden" id="existing_tecverde_se_aplica_value" value="{% if existing and existing.tecverde_se_aplica is not none %}{% if existing.tecverde_se_aplica %}1{% else %}0{% endif %}{% endif %}">
                             {% if existing and existing.additional_classifications %}
                             <input type="hidden" id="existing_additional_classifications" value="{{ existing.additional_classifications|tojson|safe }}">
                             {% endif %}
@@ -925,7 +928,205 @@
         // Variáveis para armazenar seleções existentes de tecnologias verdes
         var existingTecverdeClasse = "{{ existing.tecverde_classe if existing and existing.tecverde_classe else '' }}";
         var existingTecverdeSubclasse = "{{ existing.tecverde_subclasse if existing and existing.tecverde_subclasse else '' }}";
-        var existingTecverdeSePlica = "{{ existing.tecverde_se_aplica if existing and existing.tecverde_se_aplica else '' }}";
+        
+        // Adicionar um campo hidden para armazenar o valor de tecverde_se_aplica
+        var existingTecverdeSePlica = null;
+        if (document.getElementById('existing_tecverde_se_aplica_value')) {
+            var rawValue = document.getElementById('existing_tecverde_se_aplica_value').value;
+            if (rawValue === '1') {
+                existingTecverdeSePlica = 1;
+            } else if (rawValue === '0') {
+                existingTecverdeSePlica = 0;
+            }
+        }
+        console.log("Verificando valor de existingTecverdeSePlica:", existingTecverdeSePlica, "tipo:", typeof existingTecverdeSePlica);
+        
+        // Normalização e aplicação do valor tecverde_se_aplica, seguindo a mesma abordagem de ai_suggestions.js
+        function normalizarEAplicarTecverdeSePlica() {
+            // Verificar o valor armazenado no banco de dados
+            var dbSeAplica = $('#db_tecverde_se_aplica').val();
+            var temDadosSalvosUsuario = $('#user_has_saved_data').val() === 'true';
+            
+            // Determinar a fonte de dados a ser usada, priorizando dados salvos pelo usuário
+            let aiValue;
+            let sourceDescription;
+            let isUserDataNoValue = false; // Flag para quando o usuário salvou valor "Não"
+            
+            // Verificar se há sugestão da IA e se é "Não"
+            var aiSuggestionIsNo = false;
+            if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
+                var aiSuggestionValue = aiSuggestionData.tecverde_se_aplica;
+                aiSuggestionIsNo = aiSuggestionValue === 0 || aiSuggestionValue === "0" || 
+                                  aiSuggestionValue === false || aiSuggestionValue === "false" ||
+                                  aiSuggestionValue === "Não" || aiSuggestionValue === "Nao";
+                console.log("Verificando sugestão da IA:", {
+                    valor: aiSuggestionValue,
+                    ehNao: aiSuggestionIsNo
+                });
+            }
+            
+            // Se o usuário não salvou dados e a sugestão da IA é "Não", usar a sugestão da IA
+            if (!temDadosSalvosUsuario && aiSuggestionIsNo) {
+                aiValue = 0; // Forçar para "Não"
+                sourceDescription = "sugestão da IA (forçado para Não)";
+                console.log("PRIORIDADE: Forçando Não da sugestão da IA porque usuário não tem dados salvos");
+                isUserDataNoValue = true;
+            }
+            // Se o usuário já salvou dados e temos valor no banco de dados, usar esse valor com prioridade
+            else if (temDadosSalvosUsuario && dbSeAplica !== 'null' && dbSeAplica !== 'undefined') {
+                // Converter 'true'/'false' para boolean antes de atribuir
+                aiValue = dbSeAplica === 'true' ? true : false;
+                sourceDescription = "dados do banco de dados";
+                console.log("PRIORIDADE: Usando dados do banco de dados:", aiValue);
+                
+                // Verificar se o valor salvo pelo usuário é "Não"
+                if (aiValue === false) {
+                    isUserDataNoValue = true;
+                    console.log("Detectado que usuário salvou 'Não' para tecverde_se_aplica no banco de dados - campos classe e subclasse serão mantidos inativos e vazios");
+                }
+            }
+            // Se não temos dados confirmados no banco, verificar existingTecverdeSePlica (valor carregado do projeto)
+            else if (existingTecverdeSePlica !== undefined && existingTecverdeSePlica !== null && existingTecverdeSePlica !== '') {
+                aiValue = existingTecverdeSePlica;
+                sourceDescription = "dados carregados do projeto";
+                console.log("PRIORIDADE: Usando dados carregados do projeto:", aiValue);
+                
+                // Verificar se o valor carregado é "Não"
+                if (aiValue === false || aiValue === "false" || aiValue === 0 || aiValue === "0" || 
+                    aiValue === "Não" || aiValue === "Nao" || aiValue === "não" || aiValue === "nao") {
+                    isUserDataNoValue = true;
+                    console.log("Detectado que usuário salvou 'Não' para tecverde_se_aplica (existingTecverdeSePlica) - campos classe e subclasse serão mantidos inativos e vazios");
+                }
+            } 
+            // Se não houver dados do usuário, usar sugestões da IA
+            else if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData && aiSuggestionData.tecverde_se_aplica) {
+                aiValue = aiSuggestionData.tecverde_se_aplica;
+                sourceDescription = "sugestão da IA";
+                console.log("Usando sugestão da IA (não há dados do usuário):", aiValue);
+            }
+            // Se nem dados do usuário nem da IA estiverem disponíveis
+            else {
+                console.log("Não há dados do usuário nem sugestões da IA para tecverde_se_aplica");
+                return false;
+            }
+            
+            const selectElement = document.getElementById('tecverde_se_aplica');
+            
+            if (!selectElement) {
+                console.log("Elemento tecverde_se_aplica não encontrado");
+                return false;
+            }
+            
+            console.log(`Normalizando e aplicando valor (${sourceDescription}):`, aiValue, "tipo:", typeof aiValue);
+            
+            // Determinar o índice correto para selecionar
+            let targetIndex = -1;
+            
+            // Tratar valores booleanos, numéricos e strings
+            if (aiValue === true || aiValue === "true" || aiValue === 1 || aiValue === "1" || 
+                aiValue === "Sim" || aiValue === "sim") {
+                console.log(`Detectado valor SIM (true/1) de ${sourceDescription}`);
+                // Encontrar a opção "Sim" (geralmente índice 1)
+                for (let i = 0; i < selectElement.options.length; i++) {
+                    if (selectElement.options[i].text === "Sim") {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+                
+                // Se não encontrado pelo texto, tentar índice 1
+                if (targetIndex === -1 && selectElement.options.length > 1) {
+                    targetIndex = 1;
+                }
+            } else if (aiValue === false || aiValue === "false" || aiValue === 0 || aiValue === "0" || 
+                      aiValue === "Não" || aiValue === "Nao" || aiValue === "não" || aiValue === "nao") {
+                console.log(`Detectado valor NÃO (false/0) de ${sourceDescription}`);
+                // Encontrar a opção "Não" (geralmente índice 2)
+                for (let i = 0; i < selectElement.options.length; i++) {
+                    if (selectElement.options[i].text === "Não") {
+                        targetIndex = i;
+                        break;
+                    }
+                }
+                
+                // Se não encontrado pelo texto, tentar índice 2
+                if (targetIndex === -1 && selectElement.options.length > 2) {
+                    targetIndex = 2;
+                }
+            }
+            
+            if (targetIndex !== -1) {
+                console.log(`Definindo select para índice ${targetIndex} (${selectElement.options[targetIndex].text})`);
+                
+                // Definir o índice selecionado
+                selectElement.selectedIndex = targetIndex;
+                
+                // Definir também o valor diretamente
+                const newValue = selectElement.options[targetIndex].value;
+                selectElement.value = newValue;
+                
+                // Disparar evento de mudança
+                const event = new Event('change', { bubbles: true });
+                selectElement.dispatchEvent(event);
+                
+                // Disparar também evento de mudança jQuery para compatibilidade
+                $(selectElement).trigger('change');
+                
+                console.log(`Normalização aplicada de ${sourceDescription}, novo valor:`, selectElement.value);
+                
+                // Se o usuário salvou "Não", garantir que os campos classe e subclasse permaneçam vazios e inativos
+                if (isUserDataNoValue) {
+                    setTimeout(function() {
+                        // Desabilitar e limpar campos de classe e subclasse
+                        $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true).val('').addClass('bg-light');
+                        console.log("Campos tecverde_classe e tecverde_subclasse foram desabilitados e limpos conforme dados do usuário");
+                        
+                        // Impedir que qualquer outro script tente preenchê-los depois
+                        const preserveEmptyFields = function() {
+                            $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true).val('').addClass('bg-light');
+                        };
+                        
+                        // Executar várias vezes para garantir que nenhum outro script sobrescreva
+                        setTimeout(preserveEmptyFields, 100);
+                        setTimeout(preserveEmptyFields, 500);
+                        setTimeout(preserveEmptyFields, 1000);
+                    }, 200);
+                }
+                
+                // Garantir que o estado dos campos relacionados seja atualizado
+                setTimeout(verificarTecverdeSePlica, 100);
+                
+                return true;
+            } else {
+                console.log(`Não foi possível determinar a opção correta para selecionar a partir de ${sourceDescription}`);
+                return false;
+            }
+        }
+        
+        // Aplicar a normalização quando o documento estiver pronto
+        $(document).ready(function() {
+            // Pequeno delay para garantir que o select esteja pronto
+            setTimeout(normalizarEAplicarTecverdeSePlica, 800);
+            
+            // Aplicar novamente após um tempo maior para garantir que as sugestões da IA foram carregadas
+            setTimeout(normalizarEAplicarTecverdeSePlica, 2000);
+            
+            // Verificar se o usuário salvou "Não" para tecverde_se_aplica e proteger os campos relacionados
+            if (existingTecverdeSePlica === false || existingTecverdeSePlica === "false" || existingTecverdeSePlica === 0 || 
+                existingTecverdeSePlica === "0" || existingTecverdeSePlica === "Não" || existingTecverdeSePlica === "Nao" || 
+                existingTecverdeSePlica === "não" || existingTecverdeSePlica === "nao") {
+                
+                const protectFields = function() {
+                    console.log("Proteção adicional: Detectado que usuário salvou 'Não' para tecverde_se_aplica");
+                    $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true).val('').addClass('bg-light');
+                };
+                
+                // Executar várias vezes para garantir que nenhum outro script sobrescreva
+                setTimeout(protectFields, 1000);
+                setTimeout(protectFields, 2000);
+                setTimeout(protectFields, 3000);
+            }
+        });
         
         // Inicializar Choices.js para os selects múltiplos
         var dominioChoices = null;
@@ -1069,67 +1270,95 @@
         setTimeout(function() {
             console.log("Inicializando filtros de tecnologias verdes com valores existentes");
             
-            // Verificar se há dados existentes do usuário para tecnologias verdes
-            var hasExistingTecverde = existingTecverdeSePlica || existingTecverdeClasse || existingTecverdeSubclasse;
-            
-            if (hasExistingTecverde) {
-                console.log("Usando dados existentes do usuário para tecnologias verdes.");
-                
-                // Aplicar valores existentes
-                if (existingTecverdeSePlica) {
-                    $('#tecverde_se_aplica').val(existingTecverdeSePlica);
-                    console.log("Campo 'Tecnologia Verde se aplica?' definido para:", existingTecverdeSePlica);
-                }
-                
-                if (existingTecverdeClasse) {
-                    $('#tecverde_classe').val(existingTecverdeClasse);
-                    console.log("Classe de tecnologia verde definida para:", existingTecverdeClasse);
-                    
-                    // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
-                    setTimeout(function() {
-                        console.log("Chamando filtrarTecverdeSubclasses após delay...");
-                        filtrarTecverdeSubclasses();
-                    }, 500);
-                }
-                
-                // Forçar verificação imediata após definir os valores
-                verificarTecverdeSePlica();
-            } else if (typeof aiSuggestionData !== 'undefined') {
-                // Se não houver dados existentes do usuário mas houver sugestão da IA
-                console.log("Nenhum dado existente do usuário para tecnologias verdes. Usando sugestões da IA.");
-                
-                if (aiSuggestionData.tecverde_se_aplica) {
-                    // Usar o valor explícito de tecverde_se_aplica
-                    $('#tecverde_se_aplica').val(aiSuggestionData.tecverde_se_aplica);
-                    console.log("Campo 'Tecnologia Verde se aplica?' definido para:", aiSuggestionData.tecverde_se_aplica);
-                } else if (aiSuggestionData.tecverde_classe || aiSuggestionData.tecverde_subclasse) {
-                    // Fallback: se tiver classe ou subclasse mas não tiver o campo se_aplica, definir como "Sim"
-                    $('#tecverde_se_aplica').val("Sim");
-                    console.log("Campo 'Tecnologia Verde se aplica?' definido para 'Sim' com base nas sugestões da IA");
-                }
-                
-                if (aiSuggestionData.tecverde_classe) {
-                    $('#tecverde_classe').val(aiSuggestionData.tecverde_classe);
-                    console.log("Classe de tecnologia verde definida para:", aiSuggestionData.tecverde_classe);
-                    
-                    // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
-                    setTimeout(function() {
-                        console.log("Chamando filtrarTecverdeSubclasses após delay...");
-                        filtrarTecverdeSubclasses();
-                        
-                        // Se houver subclasse na sugestão da IA, aplicá-la após filtrar as opções
-                        if (aiSuggestionData.tecverde_subclasse) {
-                            setTimeout(function() {
-                                $('#tecverde_subclasse').val(aiSuggestionData.tecverde_subclasse);
-                                console.log("Subclasse de tecnologia verde definida para:", aiSuggestionData.tecverde_subclasse);
-                            }, 300);
-                        }
-                    }, 500);
-                }
-                
-                // Forçar verificação imediata após definir os valores
-                verificarTecverdeSePlica();
+            // Verificar se há sugestão da IA e se é "Não"
+            var aiSuggestionIsNo = false;
+            if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
+                var aiSuggestionValue = aiSuggestionData.tecverde_se_aplica;
+                aiSuggestionIsNo = aiSuggestionValue === 0 || aiSuggestionValue === "0" || 
+                                  aiSuggestionValue === false || aiSuggestionValue === "false" ||
+                                  aiSuggestionValue === "Não" || aiSuggestionValue === "Nao";
+                console.log("Verificando sugestão da IA para tecverde_se_aplica:", {
+                    valor: aiSuggestionValue,
+                    ehNao: aiSuggestionIsNo
+                });
             }
+            
+            // Verificar se o usuário tem dados salvos
+            var userHasSavedData = $('#user_has_saved_data').val() === 'true';
+            console.log("Usuário tem dados salvos:", userHasSavedData);
+            
+            // Se o usuário não tem dados salvos e a sugestão da IA é "Não", forçar para "Não"
+            if (!userHasSavedData && aiSuggestionIsNo) {
+                console.log("FORÇANDO VALOR NÃO: Usuário não tem dados salvos e sugestão da IA é Não");
+                $('#tecverde_se_aplica').val("0");
+                
+                // Disparar evento de mudança
+                const event = new Event('change', { bubbles: true });
+                document.getElementById('tecverde_se_aplica').dispatchEvent(event);
+                
+                // Disparar também evento de mudança jQuery para compatibilidade
+                $('#tecverde_se_aplica').trigger('change');
+            } else {
+                // Usar a função centralizada para determinar se devemos usar dados existentes ou sugestões da IA
+                const config = window.categorizacaoConfig || verificarDadosCategorizacao();
+                
+                if (config.tecVerde.usarDadosExistentes) {
+                    console.log("Usando dados existentes para tecnologias verdes conforme decisão centralizada");
+                    
+                    // Aplicar valores existentes
+                    if (existingTecverdeSePlica) {
+                        $('#tecverde_se_aplica').val(existingTecverdeSePlica);
+                        console.log("Campo 'Tecnologia Verde se aplica?' definido para:", existingTecverdeSePlica);
+                    }
+                    
+                    if (existingTecverdeClasse) {
+                        $('#tecverde_classe').val(existingTecverdeClasse);
+                        console.log("Classe de tecnologia verde definida para:", existingTecverdeClasse);
+                        
+                        // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
+                        setTimeout(function() {
+                            console.log("Chamando filtrarTecverdeSubclasses após delay...");
+                            filtrarTecverdeSubclasses();
+                        }, 500);
+                    }
+                } else if (config.tecVerde.usarIa) {
+                    console.log("Usando sugestões da IA para tecnologias verdes conforme decisão centralizada");
+                    
+                    const tecverdeData = config.tecVerde.dadosIa;
+                    
+                    if (tecverdeData.se_aplica) {
+                        // Usar o valor explícito de tecverde_se_aplica
+                        $('#tecverde_se_aplica').val(tecverdeData.se_aplica);
+                        console.log("Campo 'Tecnologia Verde se aplica?' definido para:", tecverdeData.se_aplica);
+                    } else if (tecverdeData.classe || tecverdeData.subclasse) {
+                        // Fallback: se tiver classe ou subclasse mas não tiver o campo se_aplica, definir como "Sim"
+                        $('#tecverde_se_aplica').val("Sim");
+                        console.log("Campo 'Tecnologia Verde se aplica?' definido para 'Sim' com base nas sugestões da IA");
+                    }
+                    
+                    if (tecverdeData.classe) {
+                        $('#tecverde_classe').val(tecverdeData.classe);
+                        console.log("Classe de tecnologia verde definida para:", tecverdeData.classe);
+                        
+                        // Chamar filtrarTecverdeSubclasses com um atraso para garantir que o valor foi aplicado
+                        setTimeout(function() {
+                            console.log("Chamando filtrarTecverdeSubclasses após delay...");
+                            filtrarTecverdeSubclasses();
+                            
+                            // Se houver subclasse na sugestão da IA, aplicá-la após filtrar as opções
+                            if (tecverdeData.subclasse) {
+                                setTimeout(function() {
+                                    $('#tecverde_subclasse').val(tecverdeData.subclasse);
+                                    console.log("Subclasse de tecnologia verde definida para:", tecverdeData.subclasse);
+                                }, 300);
+                            }
+                        }, 500);
+                    }
+                }
+            }
+            
+            // Forçar verificação imediata após definir os valores
+            verificarTecverdeSePlica();
             
             // Verificar estado dos campos com base no valor "se aplica"
             verificarTecverdeSePlica();
@@ -1144,13 +1373,21 @@
             var selectedIndex = document.getElementById('tecverde_se_aplica') ? 
                                document.getElementById('tecverde_se_aplica').selectedIndex : -1;
             
+            // Verificar o valor armazenado no banco de dados
+            var dbSeAplica = $('#db_tecverde_se_aplica').val();
+            var dbSeAplicaIsNo = dbSeAplica === 'false' || dbSeAplica === 'null' || dbSeAplica === 'undefined';
+            var userHasSavedData = $('#user_has_saved_data').val() === 'true';
+            
             console.log("Verificando se tecnologia verde se aplica:", {
                 valor: seAplica,
                 texto: seAplicaText,
                 indice: selectedIndex,
                 temSelecionado: hasSelecionado,
                 opcoes: $('#tecverde_se_aplica option').length,
-                elementoExiste: $('#tecverde_se_aplica').length
+                elementoExiste: $('#tecverde_se_aplica').length,
+                valorNoBancoDeDados: dbSeAplica,
+                valorNoBancoDeDadosEhNao: dbSeAplicaIsNo,
+                usuarioTemDadosSalvos: userHasSavedData
             });
             
             // Verificar se o campo realmente existe e tem valores
@@ -1164,8 +1401,48 @@
                 console.log(`Opção ${index}: valor='${$(this).val()}', texto='${$(this).text()}', selecionada=${$(this).is(':selected')}`);
             });
             
-            // Verificar se é "Não" pelo valor (com ou sem acento) OU pelo texto OU pelo índice (geralmente índice 2)
-            if (seAplica === "Nao" || seAplicaText === "Não" || selectedIndex === 2) {
+            console.log("Verificando condições para:", {
+                valor: seAplica,
+                texto: seAplicaText,
+                indice: selectedIndex
+            });
+            
+            // Verificar se é "Sim" pelo valor ou pelo texto ou pelo índice
+            if (seAplica === "1" || seAplica === "Sim" || seAplicaText === "Sim" || selectedIndex === 1) {
+                console.log("APLICANDO SIM: Habilitando campos de tecnologias verdes");
+                // Habilitar todos os campos de tecnologias verdes
+                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').prop('disabled', false);
+                // Remover classe visual
+                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').removeClass('bg-light');
+                console.log("Campos de tecnologias verdes habilitados");
+                
+                // Verificar se há sugestões da IA para classe e subclasse
+                if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
+                    // Aplicar classe da IA se disponível e o campo estiver vazio
+                    if (aiSuggestionData.tecverde_classe && $('#tecverde_classe').val() === '') {
+                        $('#tecverde_classe').val(aiSuggestionData.tecverde_classe);
+                        console.log("Aplicada sugestão da IA para classe:", aiSuggestionData.tecverde_classe);
+                        
+                        // Chamar filtrarTecverdeSubclasses para atualizar as opções de subclasse
+                        setTimeout(function() {
+                            filtrarTecverdeSubclasses();
+                            
+                            // Aplicar subclasse da IA após filtrar as opções
+                            if (aiSuggestionData.tecverde_subclasse) {
+                                setTimeout(function() {
+                                    $('#tecverde_subclasse').val(aiSuggestionData.tecverde_subclasse);
+                                    console.log("Aplicada sugestão da IA para subclasse:", aiSuggestionData.tecverde_subclasse);
+                                }, 300);
+                            }
+                        }, 300);
+                    }
+                }
+            }
+            // Verificar se é "Não" pelo valor ou pelo texto ou pelo índice
+            else if (seAplica === "0" || seAplica === "Nao" || seAplicaText === "Não" || selectedIndex === 2 || 
+                (!userHasSavedData && typeof aiSuggestionData !== 'undefined' && aiSuggestionData && 
+                 (aiSuggestionData.tecverde_se_aplica === 0 || aiSuggestionData.tecverde_se_aplica === "0" || 
+                  aiSuggestionData.tecverde_se_aplica === false || aiSuggestionData.tecverde_se_aplica === "false"))) {
                 console.log("APLICANDO NÃO: Desabilitando campos de tecnologias verdes");
                 // Desabilitar apenas os campos de classe e subclasse, mas NÃO o campo de observações
                 $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true);
@@ -1174,21 +1451,6 @@
                 // Limpar valores dos campos se estiver definido como "Não"
                 $('#tecverde_classe, #tecverde_subclasse').val('');
                 console.log("Campos de classe e subclasse desabilitados e limpos, mantendo observações habilitado");
-            } else if (seAplica === "Sim" || seAplicaText === "Sim" || selectedIndex === 1) {
-                console.log("APLICANDO SIM: Habilitando campos de tecnologias verdes");
-                // Habilitar todos os campos de tecnologias verdes
-                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').prop('disabled', false);
-                // Remover classe visual
-                $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').removeClass('bg-light');
-                console.log("Campos de tecnologias verdes habilitados");
-            } else {
-                console.log(`INDEFINIDO: Valor="${seAplica}", Texto="${seAplicaText}", Índice=${selectedIndex}`);
-                // Caso em que não conseguimos determinar se é "Sim" ou "Não"
-                // Desabilitar apenas os campos de classe e subclasse, mantendo observações habilitado
-                $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true);
-                // Adicionar classe visual para indicar campos desabilitados
-                $('#tecverde_classe, #tecverde_subclasse').addClass('bg-light');
-                console.log("Campos de classe e subclasse desabilitados (valor indefinido), mantendo observações habilitado");
             }
         }
         
@@ -1292,31 +1554,16 @@
         var existingDominio = "{{ existing.dominio if existing and existing.dominio else '' }}";
         var existingDominioOutros = "{{ existing.dominio_outros if existing and existing.dominio_outros else '' }}";
         
-        // Verificar se há dados existentes do usuário para a área de interesse
-        var hasExistingAreaInteresse = existingMicroarea || existingSegmento || existingDominio || existingDominioOutros;
-        
-        // Se não houver dados existentes do usuário e houver sugestões da IA, usar as sugestões
-        if (!hasExistingAreaInteresse && typeof aiSuggestionData !== 'undefined') {
-            console.log("Nenhum dado existente do usuário para área de interesse. Usando sugestões da IA.");
-            
-            if (aiSuggestionData._aia_n1_macroarea) {
-                existingMicroarea = aiSuggestionData._aia_n1_macroarea;
-                console.log("Usando microárea da IA:", existingMicroarea);
-            }
-            if (aiSuggestionData._aia_n2_segmento) {
-                existingSegmento = aiSuggestionData._aia_n2_segmento;
-                console.log("Usando segmento da IA:", existingSegmento);
-            }
-            if (aiSuggestionData._aia_n3_dominio_afeito) {
-                existingDominio = aiSuggestionData._aia_n3_dominio_afeito;
-                console.log("Usando domínio da IA:", existingDominio);
-            }
-            if (aiSuggestionData._aia_n3_dominio_outro) {
-                existingDominioOutros = aiSuggestionData._aia_n3_dominio_outro;
-                console.log("Usando domínio outros da IA:", existingDominioOutros);
-            }
-        } else if (hasExistingAreaInteresse) {
-            console.log("Usando dados existentes do usuário para área de interesse.");
+        // Usar a função centralizada para determinar se devemos usar dados existentes ou sugestões da IA
+        const config = window.categorizacaoConfig || verificarDadosCategorizacao();
+        if (config.areaInteresse.usarIa) {
+            console.log("Usando sugestões da IA para área de interesse conforme decisão centralizada");
+            existingMicroarea = config.areaInteresse.dadosIa.microarea;
+            existingSegmento = config.areaInteresse.dadosIa.segmento;
+            existingDominio = config.areaInteresse.dadosIa.dominio;
+            existingDominioOutros = config.areaInteresse.dadosIa.dominio_outros;
+        } else if (config.areaInteresse.usarDadosExistentes) {
+            console.log("Usando dados existentes para área de interesse conforme decisão centralizada");
         }
         
         console.log("Valores a serem aplicados:", {
@@ -2503,94 +2750,23 @@
         $(window).on('load', function() {
             setTimeout(garantirValorTecverde, 1000);
 
-            // Código de depuração avançada e solução definitiva
+            // Inicializar o sistema após a página estar totalmente carregada
             setTimeout(function() {
-                console.log("==== DIAGNÓSTICO AVANÇADO DO PROBLEMA COM O VALOR 'NÃO' ====");
-                
-                // 1. Verificar todas as opções do select em detalhes
-                const select = document.getElementById('tecverde_se_aplica');
-                if (select) {
-                    console.log("Total de opções no select:", select.options.length);
-                    
-                    for (let i = 0; i < select.options.length; i++) {
-                        const option = select.options[i];
-                        console.log(`Opção ${i}:`, {
-                            valor: option.value,
-                            texto: option.text,
-                            // Verificar os caracteres individuais como códigos para detectar problemas de codificação
-                            valorCharCodes: Array.from(option.value).map(c => c.charCodeAt(0)),
-                            textoCharCodes: Array.from(option.text).map(c => c.charCodeAt(0)),
-                            selected: option.selected
-                        });
-                    }
+                // Verificar e corrigir os campos de tecnologias verdes se necessário
+                if (typeof window.verificarTecverdeSePlica === 'function') {
+                    window.verificarTecverdeSePlica();
                 }
-                
-                // 2. SOLUÇÃO DEFINITIVA: Modificar diretamente o HTML da terceira opção
-                if (select && select.options.length >= 3) {
-                    // Vamos garantir que a terceira opção (índice 2) tenha um valor ASCII sem acentos
-                    const option = select.options[2];
-                    
-                    // Problema: Pode haver um problema com o valor "Não" devido ao "ã"
-                    // Solução: Vamos mudar o valor para algo mais simples, mantendo o texto original
-                    if (option.text === "Não") {
-                        const valorAntigo = option.value;
-                        option.value = "Nao"; // Valor sem acento, mas mantendo o texto com acento
-                        
-                        console.log(`Modificada opção 'Não': valor alterado de '${valorAntigo}' para 'Nao'`);
-                        console.log("Opção 'Não' após modificação:", {
-                            valor: option.value,
-                            texto: option.text,
-                            valorCharCodes: Array.from(option.value).map(c => c.charCodeAt(0)),
-                            textoCharCodes: Array.from(option.text).map(c => c.charCodeAt(0))
-                        });
-                    }
-                }
-                
-                // 3. Se o aiSuggestionData indica "Não", agora vamos forçar a seleção definitivamente
-                if (typeof aiSuggestionData !== 'undefined' && (aiSuggestionData.tecverde_se_aplica === "Não" || aiSuggestionData.tecverde_se_aplica === "Nao")) {
-                    console.log("Tentando aplicar 'Não' depois da modificação do valor...");
-                    
-                    if (select && select.options.length >= 3) {
-                        // Limpar seleção atual
-                        select.selectedIndex = -1;
-                        
-                        // Definir a opção "Não" (agora com valor "Nao")
-                        select.options[2].selected = true;
-                        select.selectedIndex = 2;
-                        
-                        // Especificamente para o caso da opção "Não", também tentar pelo valor modificado
-                        if ($('#tecverde_se_aplica').val() !== "Nao") {
-                            $('#tecverde_se_aplica').val("Nao");
-                        }
-                        
-                        // Forçar o disparo do evento change
-                        $('#tecverde_se_aplica').trigger('change');
-                        
-                        console.log("Estado final do select após aplicação forçada:", {
-                            selectedIndex: select.selectedIndex,
-                            selectedValue: select.value,
-                            selectedText: select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : 'nenhum',
-                            jqueryVal: $('#tecverde_se_aplica').val()
-                        });
-                    }
-                    
-                    // Forçar a verificação após a aplicação
-                    verificarTecverdeSePlica();
-                }
-                
-                console.log("==== FIM DO DIAGNÓSTICO ====");
             }, 1500);
         });
     });
 </script>
-<!-- Incluir o script de sugestões da IA -->
+<!-- Incluir o script de gerenciamento de categorização e sugestões da IA -->
+<script src="{{ url_for('static', filename='js/categorization_manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/ai_suggestions.js') }}"></script>
 
 <!-- Script para salvar todos os formulários -->
 <script src="{{ url_for('static', filename='js/save_all.js') }}"></script>
 
-<!-- Script de debug para o campo tecverde_se_aplica -->
-<script src="{{ url_for('static', filename='js/debug_tecverde.js') }}"></script>
 <script>
     $(document).ready(function() {
         // Inicializar o botão de salvar tudo
@@ -2598,21 +2774,16 @@
             saveAllForms();
         });
         
-        // Aplicar automaticamente a correção para os campos de tecnologia verde
-        setTimeout(function() {
-            console.log("Aplicando correção automática para campos de tecnologia verde...");
-            if (typeof window.fixClasseAndSubclasse === 'function') {
-                window.fixClasseAndSubclasse();
-            } else {
-                console.error("Função fixClasseAndSubclasse não encontrada no escopo global");
-            }
-        }, 2500); // Delay maior para garantir que todos os scripts foram carregados
+        
         
         // Script adicional para garantir que o campo de observações de tecnologias verdes esteja sempre habilitado
         // Garantir que o campo de observações de tecnologias verdes esteja sempre habilitado
         function garantirCampoObservacoesHabilitado() {
             console.log("Garantindo que o campo de observações de tecnologias verdes esteja habilitado...");
             $('#tecverde_observacoes').prop('disabled', false).removeClass('bg-light');
+            
+            // Verificar se estamos aplicando sugestões da IA e se o usuário ainda não salvou os dados
+            var isApplyingAiSuggestions = window.applyingAiSuggestions === true;
             
             // Verificar se temos dados de sugestão da IA
             if (typeof aiSuggestionData !== 'undefined' && aiSuggestionData) {
@@ -2625,7 +2796,8 @@
                     $('#aiTecverdeSuggestionSection').show();
                 }
                 
-                if (justificativa) {
+                // Aplicar justificativa da IA apenas se estamos no modo IA e o usuário ainda não salvou dados
+                if (justificativa && isApplyingAiSuggestions && !userHasSavedData) {
                     console.log("Verificando se é necessário aplicar justificativa da IA...");
                     
                     // Verificar se o campo de observações está vazio
@@ -2653,19 +2825,19 @@
         // Executar ao carregar a página com um atraso para garantir que outros scripts foram executados
         setTimeout(garantirCampoObservacoesHabilitado, 3000);
         
-        // Executar também quando houver mudança no campo "se aplica"
-        $('#tecverde_se_aplica').change(function() {
-            // Breve delay para garantir que outros manipuladores de evento sejam executados primeiro
-            setTimeout(garantirCampoObservacoesHabilitado, 300);
-        });
-        
-        // Executar repetidamente nos primeiros 10 segundos para garantir que seja aplicado
-        for (let i = 1; i <= 5; i++) {
-            setTimeout(garantirCampoObservacoesHabilitado, i * 2000); // Executar a cada 2 segundos durante 10 segundos
-        }
+
+    
         
         // Função para forçar o recarregamento dos domínios
         function forcarRecarregamentoDominios() {
+            // Verificar se estamos aplicando sugestões da IA e se o usuário ainda não salvou os dados
+            var isApplyingAiSuggestions = window.applyingAiSuggestions === true;
+            
+            if (!isApplyingAiSuggestions || userHasSavedData) {
+                console.log("Ignorando recarregamento de domínios - usando dados salvos pelo usuário");
+                return;
+            }
+            
             console.log("Forçando recarregamento dos domínios...");
             
             // Verificar se há microárea e segmento selecionados

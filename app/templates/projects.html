@@ -336,8 +336,9 @@
                 <span class="version-badge">v1.0</span>
                 <span class="project-count-badge">
                     <i class="fas fa-folder count-icon"></i>
-                    {{ "{:,}".format(projects|length).replace(',', '.') }}
+                    {{ "{:,}".format(total_projects).replace(',', '.') }}
                 </span>
+                <input type="hidden" id="totalProjectsCount" value="{{ total_projects }}">
             </h2>
             <p class="projects-subtitle">
                 Classificador de projetos Embrapii
@@ -544,6 +545,9 @@
     }
 
     $(document).ready(function() {
+        // Armazenar o total de projetos em uma variável
+        var totalProjects = parseInt($("#totalProjectsCount").val());
+        
         // Inicializar tooltips do Bootstrap com opções personalizadas
         var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
         var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
@@ -569,7 +573,7 @@
         
         // Esconder o overlay de carregamento se estiver visível
         if (typeof aiLoading !== 'undefined') {
-            aiLoading.hide();
+            aiLoading.completeProgress();
         }
         
         // Adicionar atributo data-categorizado às linhas
@@ -650,7 +654,7 @@
         // Função para atualizar o contador de projetos
         function updateProjectCount() {
             var visibleRows = $("#projectsTable tbody tr:visible").not("#noResults").length;
-            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + visibleRows.toLocaleString('pt-BR').replace(',', '.'));
+            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + totalProjects.toLocaleString('pt-BR').replace(',', '.'));
         }
         
         // Função para verificar se não há resultados e mostrar mensagem
