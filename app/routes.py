@@ -293,8 +293,11 @@ def projects():
         # Aplicar filtro de categoria se fornecido
         if filter_type != 'all' and filter_type in ['uncategorized', 'ai_classified', 'human_validated']:
             if filter_type == 'uncategorized':
-                # Projetos sem categoria
-                query = query.outerjoin(Categoria).filter(Categoria.id_projeto == None)
+                # Projetos sem categoria e sem sugestão da IA
+                query = query.outerjoin(Categoria).outerjoin(AISuggestion).filter(
+                    Categoria.id_projeto == None,
+                    AISuggestion.id_projeto == None
+                )
             elif filter_type == 'ai_classified':
                 # Projetos classificados por IA (tem sugestão da IA mas não tem categoria)
                 query = query.outerjoin(Categoria).outerjoin(AISuggestion).filter(
@@ -1119,6 +1122,65 @@ def view_logs():
     except Exception as e:
         flash(f'Erro ao carregar logs: {str(e)}', 'error')
         logger.error(f"Erro ao carregar logs: {str(e)}")
+        return redirect(url_for('main.projects'))
+
+# Rota para ir para o próximo projeto
+@main.route('/next_project/<current_project_id>')
+@login_required
+def next_project(current_project_id):
+    try:
+        # Buscar o projeto atual para obter seu ID
+        current_project = Projeto.query.filter_by(codigo_projeto=current_project_id).first_or_404()
+        
+        # Primeiro, tentar encontrar o próximo projeto classificado por IA mas não validado por humano
+        next_project = Projeto.query.join(
+            AISuggestion, Projeto.id == AISuggestion.id_projeto
+        ).outerjoin(
+            Categoria, Projeto.id == Categoria.id_projeto
+        ).filter(
+            Categoria.id_projeto == None,  # Não tem categoria (não validado por humano)
+            Projeto.id > current_project.id  # ID maior que o atual (próximo)
+        ).order_by(Projeto.id).first()
+        
+        # Se não encontrou, buscar qualquer projeto não classificado
+        if not next_project:
+            next_project = Projeto.query.outerjoin(
+                Categoria, Projeto.id == Categoria.id_projeto
+            ).filter(
+                Categoria.id_projeto == None,  # Não tem categoria (não classificado)
+                Projeto.id > current_project.id  # ID maior que o atual (próximo)
+            ).order_by(Projeto.id).first()
+            
+        # Se ainda não encontrou, pegar o primeiro projeto (recomeçar do início)
+        if not next_project:
+            # Primeiro tentar projetos classificados por IA mas não validados
+            next_project = Projeto.query.join(
+                AISuggestion, Projeto.id == AISuggestion.id_projeto
+            ).outerjoin(
+                Categoria, Projeto.id == Categoria.id_projeto
+            ).filter(
+                Categoria.id_projeto == None  # Não tem categoria (não validado por humano)
+            ).order_by(Projeto.id).first()
+            
+            # Se não encontrou, buscar qualquer projeto não classificado
+            if not next_project:
+                next_project = Projeto.query.outerjoin(
+                    Categoria, Projeto.id == Categoria.id_projeto
+                ).filter(
+                    Categoria.id_projeto == None  # Não tem categoria (não classificado)
+                ).order_by(Projeto.id).first()
+        
+        # Se encontrou um próximo projeto, redirecionar para ele
+        if next_project:
+            return redirect(url_for('main.categorize', project_id=next_project.codigo_projeto))
+        
+        # Se não encontrou nenhum projeto, voltar para a lista de projetos
+        flash('Não há mais projetos para classificar.', 'info')
+        return redirect(url_for('main.projects'))
+        
+    except Exception as e:
+        flash(f'Erro ao buscar próximo projeto: {str(e)}', 'error')
+        logger.error(f"Erro ao buscar próximo projeto: {str(e)}")
         return redirect(url_for('main.projects'))
 
 # Rota para visualização de categorias

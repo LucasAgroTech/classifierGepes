@@ -3,6 +3,7 @@
 {% block title %}gepesClassifier v1.1{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 <style>
     .projects-header {
         padding-bottom: 1.5rem;
@@ -724,6 +725,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script>
     // Função para formatar timestamp para data no formato brasileiro (dd/mm/aaaa)
     function formatarDataBrasileira(timestamp) {

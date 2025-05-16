@@ -45,13 +45,13 @@ class ChatBot {
     createChatInterface() {
         // Create container
         this.container = document.createElement('div');
-        this.container.className = 'chat-container';
+        this.container.className = 'chat-container minimized';
         
         // Create header
         const header = document.createElement('div');
         header.className = 'chat-header';
         header.innerHTML = `
-            <h3><i class="fas fa-robot"></i> Assistente gepesClassifier</h3>
+            <h3><i class="fas fa-robot"></i> <span>Assistente gepesClassifier</span></h3>
             <div class="chat-controls">
                 <button class="minimize-chat" title="Minimizar"><i class="fas fa-minus"></i></button>
                 <button class="clear-chat" title="Limpar conversa"><i class="fas fa-trash"></i></button>
@@ -95,7 +95,13 @@ class ChatBot {
         header.addEventListener('click', (e) => {
             // Ignore clicks on control buttons
             if (e.target.closest('.chat-controls')) return;
-            this.toggleChat();
+            
+            // If minimized, open the chat
+            if (this.container.classList.contains('minimized')) {
+                this.toggleChat(true);
+            } else {
+                this.toggleChat();
+            }
         });
         
         // Minimize chat
@@ -137,11 +143,25 @@ class ChatBot {
      */
     toggleChat(forceState = null) {
         this.isOpen = forceState !== null ? forceState : !this.isOpen;
-        this.container.classList.toggle('open', this.isOpen);
         
         if (this.isOpen) {
+            // Opening the chat
+            this.container.classList.add('open');
+            this.container.classList.remove('minimized');
             this.inputField.focus();
             this.scrollToBottom();
+            
+            // Update minimize button icon
+            const minimizeBtn = this.container.querySelector('.minimize-chat i');
+            minimizeBtn.className = 'fas fa-minus';
+        } else {
+            // Closing/minimizing the chat
+            this.container.classList.remove('open');
+            this.container.classList.add('minimized');
+            
+            // Update minimize button icon
+            const minimizeBtn = this.container.querySelector('.minimize-chat i');
+            minimizeBtn.className = 'fas fa-expand';
         }
     }
     
@@ -360,8 +380,10 @@ class ChatBot {
 
 // Initialize chat when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    // Only initialize on dashboard page
-    if (document.querySelector('.dashboard-header')) {
+    // Initialize on dashboard, projects, and categorize pages
+    if (document.querySelector('.dashboard-header') || 
+        document.querySelector('.projects-header') || 
+        document.querySelector('.page-header')) {
         window.chatBot = new ChatBot();
     }
 });

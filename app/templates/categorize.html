@@ -6,6 +6,7 @@
 {% set body_class = "categorize-page" %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 <!-- Choices.js CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
 <!-- Custom styles for Choices.js and expandable sections -->
@@ -195,6 +196,9 @@
             <button type="button" id="saveAllFormsBtn" class="btn btn-success btn-sm rounded-pill me-2" title="Salvar todos os formulários">
                 <i class="fas fa-save me-1"></i>Salvar Tudo
             </button>
+            <a href="{{ url_for('main.next_project', current_project_id=project.codigo_projeto) }}" class="btn btn-primary btn-sm rounded-pill me-2" style="width: auto;" title="Próximo projeto">
+                <i class="fas fa-arrow-right"></i>
+            </a>
         </div>
     </div>
 
@@ -841,6 +845,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <!-- SweetAlert2 -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <!-- Choices.js -->
