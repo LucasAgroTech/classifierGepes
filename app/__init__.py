@@ -32,6 +32,10 @@ def create_app(config_class=Config):
     from app.routes_ai_ratings import ai_ratings_bp
     app.register_blueprint(ai_ratings_bp)
     
+    # Registrar blueprint para dashboard
+    from app.routes_dashboard import dashboard_bp
+    app.register_blueprint(dashboard_bp)
+    
     # Criar tabelas se não existirem (apenas para desenvolvimento)
     with app.app_context():
         db.create_all()

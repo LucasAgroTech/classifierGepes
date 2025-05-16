@@ -1,0 +1,118 @@
+{
+  "total": 10,
+  "success": 10,
+  "error": 0,
+  "skipped": 0,
+  "results": [
+    {
+      "project_id": 1,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria química",
+        "dominio": "Desenvolvimento de novos polímeros e compósitos; Processos sustentáveis para síntese química",
+        "dominio_outro": "Sustentabilidade no ciclo de vida do produto; Reaproveitamento de resíduos lignocelulósicos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 2,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Agricultura de precisão e automação agrícola; Gestão e Manejo da produção agrícola",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 4,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Redes Elétricas",
+        "dominio": "Monitoramento de redes elétricas urbanas e industriais",
+        "dominio_outro": "Monitoramento e automação de redes de abastecimento e coleta",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 5,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Agricultura de precisão e automação agrícola",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 6,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Dispositivos Médicos e Biomateriais",
+        "dominio": "Equipamentos de diagnóstico",
+        "dominio_outro": "Telemedicina; Integração de inteligência artificial em fluxos assistenciais; Sistemas de informação em saúde e interoperabilidade de dados",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 7,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Assistência à Saúde",
+        "dominio": "Telemedicina; Soluções digitais de triagem e atendimento; Integração de inteligência artificial em fluxos assistenciais",
+        "dominio_outro": "Sistemas de informação em saúde e interoperabilidade de dados; Monitoramento de condições crônicas e promoção do autocuidado",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 8,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Dispositivos Médicos e Biomateriais",
+        "dominio": "Equipamentos de diagnóstico",
+        "dominio_outro": "Sistemas de informação em saúde e interoperabilidade de dados; Integração de inteligência artificial em fluxos assistenciais",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 9,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria de móveis e madeira",
+        "dominio": "Tratamentos ecológicos para proteção de madeira",
+        "dominio_outro": "Novas fibras e bioprodutos a partir de celulose; Reaproveitamento de resíduos lignocelulósicos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 10,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Fertilizantes e nutrição vegetal",
+        "dominio_outro": "Nutrição e alimentação animal",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 11,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Redes Elétricas",
+        "dominio": "Medição inteligente e redes de energia digitalizadas (smart grids); Eficiência energética em sistemas de distribuição; Monitoramento de redes elétricas urbanas e industriais; Tecnologias para redução de perdas técnicas e comerciais",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,911 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - gepesClassifier{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Estilos gerais do dashboard */
+    .dashboard-header {
+        padding-bottom: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .dashboard-title {
+        color: var(--primary-dark, #1A6354);
+        font-weight: 700;
+        font-size: 1.8rem;
+        display: flex;
+        align-items: center;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-title i {
+        margin-right: 0.5rem;
+        color: var(--primary-color, #009260);
+    }
+    
+    .dashboard-subtitle {
+        color: var(--text-muted, #6c757d);
+        font-size: 1.1rem;
+        font-weight: 500;
+        margin-bottom: 0;
+    }
+    
+    /* Cards de estatísticas */
+    .dashboard-card {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+        border: none;
+    }
+    
+    .dashboard-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    }
+    
+    .stat-card {
+        padding: 1.5rem;
+        text-align: center;
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        color: var(--primary-color, #009260);
+        background: rgba(0, 146, 96, 0.1);
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-dark, #1A6354);
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 1rem;
+        color: var(--text-muted, #6c757d);
+        font-weight: 500;
+    }
+    
+    .stat-percentage {
+        font-size: 0.9rem;
+        color: #28a745;
+        font-weight: 600;
+        margin-top: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .stat-percentage.negative {
+        color: #dc3545;
+    }
+    
+    .stat-percentage i {
+        margin-right: 0.25rem;
+    }
+    
+    /* Contêineres de gráficos */
+    .chart-container {
+        position: relative;
+        height: 300px;
+        padding: 1rem;
+    }
+    
+    .card-header {
+        background-color: var(--primary-dark, #1A6354);
+        color: white;
+        font-weight: 600;
+        padding: 1rem;
+        border-bottom: none;
+    }
+    
+    .card-header h5 {
+        margin-bottom: 0;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        color: white;
+    }
+    
+    .card-header h5 i {
+        margin-right: 0.5rem;
+        color: white;
+    }
+    
+    /* Tabela de atividades recentes */
+    .activity-table th {
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--primary-dark, #1A6354);
+    }
+    
+    .activity-table td {
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    
+    .activity-user {
+        font-weight: 600;
+        color: var(--primary-dark, #1A6354);
+    }
+    
+    .activity-project {
+        font-weight: 500;
+        color: var(--primary-color, #009260);
+    }
+    
+    .activity-date {
+        font-size: 0.85rem;
+        color: var(--text-muted, #6c757d);
+    }
+    
+    .activity-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 50rem;
+    }
+    
+    /* Distribuição de status */
+    .status-distribution {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .status-label {
+        width: 30%;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    
+    .status-bar-container {
+        width: 50%;
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .status-bar {
+        height: 100%;
+        border-radius: 5px;
+    }
+    
+    .status-percentage {
+        width: 20%;
+        text-align: right;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: var(--primary-dark, #1A6354);
+    }
+    
+    /* Cores para os status */
+    .status-validated {
+        background-color: #28a745;
+    }
+    
+    .status-ai {
+        background-color: #007bff;
+    }
+    
+    .status-uncategorized {
+        background-color: #ffc107;
+    }
+    
+    /* Cores para tecnologia verde */
+    .tecverde-yes {
+        background-color: #28a745;
+    }
+    
+    .tecverde-no {
+        background-color: #dc3545;
+    }
+    
+    .tecverde-unclassified {
+        background-color: #6c757d;
+    }
+    
+    /* Avaliações da IA */
+    .rating-stars {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 1rem 0;
+    }
+    
+    .rating-star {
+        color: #ffc107;
+        font-size: 1.5rem;
+        margin: 0 0.25rem;
+    }
+    
+    .rating-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-dark, #1A6354);
+        margin-left: 1rem;
+    }
+    
+    .rating-distribution {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+    
+    .rating-label {
+        width: 20%;
+        display: flex;
+        align-items: center;
+    }
+    
+    .rating-label i {
+        color: #ffc107;
+        margin-right: 0.25rem;
+    }
+    
+    .rating-bar-container {
+        width: 60%;
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 0 0.5rem;
+    }
+    
+    .rating-bar {
+        height: 100%;
+        background-color: #ffc107;
+        border-radius: 4px;
+    }
+    
+    .rating-count {
+        width: 20%;
+        text-align: right;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted, #6c757d);
+    }
+    
+    /* Top unidades */
+    .top-ue-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .top-ue-item:last-child {
+        border-bottom: none;
+    }
+    
+    .top-ue-name {
+        font-weight: 500;
+        color: var(--primary-dark, #1A6354);
+    }
+    
+    .top-ue-count {
+        font-weight: 600;
+        color: var(--primary-color, #009260);
+        background-color: rgba(0, 146, 96, 0.1);
+        padding: 0.25rem 0.75rem;
+        border-radius: 50rem;
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        .stat-icon {
+            font-size: 2rem;
+            width: 60px;
+            height: 60px;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+        }
+        
+        .chart-container {
+            height: 250px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div>
+        <h2 class="dashboard-title">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </h2>
+        <p class="dashboard-subtitle">Visão geral dos projetos e estatísticas</p>
+    </div>
+    <div>
+        <a href="{{ url_for('main.projects') }}" class="btn btn-outline-primary">
+            <i class="fas fa-arrow-left me-1"></i> Voltar para Projetos
+        </a>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">
+    <i class="fas fa-exclamation-triangle me-2"></i> Erro ao carregar o dashboard: {{ error }}
+</div>
+{% else %}
+
+<!-- Estatísticas gerais -->
+<div class="row mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card dashboard-card h-100">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-folder"></i>
+                </div>
+                <div class="stat-value">{{ stats.total_projects }}</div>
+                <div class="stat-label">Total de Projetos</div>
+                {% if stats.recent_projects > 0 %}
+                <div class="stat-percentage">
+                    <i class="fas fa-plus"></i> {{ stats.recent_projects }} nos últimos 30 dias
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card dashboard-card h-100">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-value">{{ stats.categorized_projects }}</div>
+                <div class="stat-label">Projetos Categorizados</div>
+                <div class="stat-percentage">
+                    <i class="fas fa-chart-pie"></i> {{ stats.categorized_percentage }}% do total
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card dashboard-card h-100">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-leaf"></i>
+                </div>
+                <div class="stat-value">{{ stats.tecverde_projects }}</div>
+                <div class="stat-label">Tecnologias Verdes</div>
+                <div class="stat-percentage">
+                    <i class="fas fa-chart-pie"></i> {{ stats.tecverde_percentage }}% do total
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-sm-6">
+        <div class="card dashboard-card h-100">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="stat-value">{{ stats.ai_suggested_projects }}</div>
+                <div class="stat-label">Sugestões da IA</div>
+                <div class="stat-percentage">
+                    <i class="fas fa-chart-pie"></i> {{ stats.ai_suggested_percentage }}% do total
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Distribuição por status e tecnologia verde -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-tasks"></i> Distribuição por Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="status-distribution">
+                    <div class="status-label">Validado por Humano</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar status-validated" style="width: {{ status_distribution.human_validated_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ status_distribution.human_validated_percentage }}%</div>
+                </div>
+                <div class="status-distribution">
+                    <div class="status-label">Classificado por IA</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar status-ai" style="width: {{ status_distribution.ai_classified_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ status_distribution.ai_classified_percentage }}%</div>
+                </div>
+                <div class="status-distribution">
+                    <div class="status-label">Não Classificado</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar status-uncategorized" style="width: {{ status_distribution.uncategorized_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ status_distribution.uncategorized_percentage }}%</div>
+                </div>
+                <div class="text-center mt-3">
+                    <div class="small text-muted">
+                        <span class="badge bg-success me-2">Validado por Humano: {{ status_distribution.human_validated }}</span>
+                        <span class="badge bg-primary me-2">Classificado por IA: {{ status_distribution.ai_classified }}</span>
+                        <span class="badge bg-warning">Não Classificado: {{ status_distribution.uncategorized }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-leaf"></i> Distribuição por Tecnologia Verde</h5>
+            </div>
+            <div class="card-body">
+                <div class="status-distribution">
+                    <div class="status-label">Sim</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar tecverde-yes" style="width: {{ tecverde_distribution.tecverde_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ tecverde_distribution.tecverde_percentage }}%</div>
+                </div>
+                <div class="status-distribution">
+                    <div class="status-label">Não</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar tecverde-no" style="width: {{ tecverde_distribution.non_tecverde_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ tecverde_distribution.non_tecverde_percentage }}%</div>
+                </div>
+                <div class="status-distribution">
+                    <div class="status-label">Não Classificado</div>
+                    <div class="status-bar-container">
+                        <div class="status-bar tecverde-unclassified" style="width: {{ tecverde_distribution.unclassified_percentage }}%"></div>
+                    </div>
+                    <div class="status-percentage">{{ tecverde_distribution.unclassified_percentage }}%</div>
+                </div>
+                <div class="text-center mt-3">
+                    <div class="small text-muted">
+                        <span class="badge bg-success me-2">Sim: {{ tecverde_distribution.tecverde }}</span>
+                        <span class="badge bg-danger me-2">Não: {{ tecverde_distribution.non_tecverde }}</span>
+                        <span class="badge bg-secondary">Não Classificado: {{ tecverde_distribution.unclassified }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráficos -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Distribuição por Macroárea</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="macroareaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Top 10 Segmentos</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="segmentosChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-leaf"></i> Distribuição por Tecnologia Verde</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="tecverdeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-calendar-alt"></i> Timeline de Projetos</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="timelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avaliações da IA e Top Unidades -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-star"></i> Avaliações da IA</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-center mb-3">Área de Interesse de Aplicação</h6>
+                        <div class="rating-stars">
+                            {% for i in range(1, 6) %}
+                                {% if i <= ai_ratings.avg_aia_rating|round(0, 'floor') %}
+                                    <i class="fas fa-star rating-star"></i>
+                                {% elif i - 0.5 <= ai_ratings.avg_aia_rating %}
+                                    <i class="fas fa-star-half-alt rating-star"></i>
+                                {% else %}
+                                    <i class="far fa-star rating-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-value">{{ ai_ratings.avg_aia_rating }}</span>
+                        </div>
+                        
+                        {% for i in range(5, 0, -1) %}
+                        <div class="rating-distribution">
+                            <div class="rating-label">
+                                {% for j in range(i) %}
+                                <i class="fas fa-star"></i>
+                                {% endfor %}
+                            </div>
+                            <div class="rating-bar-container">
+                                {% set percentage = (ai_ratings.aia_distribution[i] / ai_ratings.total_ratings * 100) if ai_ratings.total_ratings > 0 else 0 %}
+                                <div class="rating-bar" style="width: {{ percentage }}%"></div>
+                            </div>
+                            <div class="rating-count">{{ ai_ratings.aia_distribution[i] }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-center mb-3">Tecnologia Verde</h6>
+                        <div class="rating-stars">
+                            {% for i in range(1, 6) %}
+                                {% if i <= ai_ratings.avg_tecverde_rating|round(0, 'floor') %}
+                                    <i class="fas fa-star rating-star"></i>
+                                {% elif i - 0.5 <= ai_ratings.avg_tecverde_rating %}
+                                    <i class="fas fa-star-half-alt rating-star"></i>
+                                {% else %}
+                                    <i class="far fa-star rating-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-value">{{ ai_ratings.avg_tecverde_rating }}</span>
+                        </div>
+                        
+                        {% for i in range(5, 0, -1) %}
+                        <div class="rating-distribution">
+                            <div class="rating-label">
+                                {% for j in range(i) %}
+                                <i class="fas fa-star"></i>
+                                {% endfor %}
+                            </div>
+                            <div class="rating-bar-container">
+                                {% set percentage = (ai_ratings.tecverde_distribution[i] / ai_ratings.total_ratings * 100) if ai_ratings.total_ratings > 0 else 0 %}
+                                <div class="rating-bar" style="width: {{ percentage }}%"></div>
+                            </div>
+                            <div class="rating-count">{{ ai_ratings.tecverde_distribution[i] }}</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-building"></i> Top Unidades Embrapii</h5>
+            </div>
+            <div class="card-body">
+                {% if top_ues %}
+                    {% for ue in top_ues %}
+                    <div class="top-ue-item">
+                        <div class="top-ue-name">{{ ue.nome }}</div>
+                        <div class="top-ue-count">{{ ue.count }}</div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-info-circle me-1"></i> Nenhuma unidade encontrada
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Atividades recentes -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card dashboard-card">
+            <div class="card-header">
+                <h5><i class="fas fa-history"></i> Atividades Recentes</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table activity-table">
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Projeto</th>
+                                <th>Ação</th>
+                                <th>Data</th>
+                                <th>Detalhes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if recent_activities %}
+                                {% for activity in recent_activities %}
+                                <tr>
+                                    <td>
+                                        <span class="activity-user">
+                                            <i class="fas fa-user me-1"></i> {{ activity.usuario }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('main.categorize', project_id=activity.projeto_id) }}" class="activity-project">
+                                            {{ activity.projeto_nome|truncate(30) }}
+                                        </a>
+                                    </td>
+                                    <td>{{ activity.acao|title }}</td>
+                                    <td>
+                                        <span class="activity-date">
+                                            <i class="far fa-clock me-1"></i> {{ activity.data }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if activity.utilizou_ia %}
+                                        <span class="badge bg-info activity-badge">
+                                            <i class="fas fa-robot me-1"></i> Utilizou IA
+                                        </span>
+                                        {% endif %}
+                                        
+                                        {% if activity.usuario_modificou %}
+                                        <span class="badge bg-success activity-badge">
+                                            <i class="fas fa-user-edit me-1"></i> Modificado pelo usuário
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-3">
+                                        <i class="fas fa-info-circle me-1"></i> Nenhuma atividade recente encontrada
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Inicializar gráficos com os dados do backend
+    const chartsData = {{ charts_data|safe }};
+    
+    // Cores para os gráficos
+    const colors = [
+        '#009260', '#1A6354', '#35BB9F', '#6EDCC6', '#9EEADB',
+        '#4B7BEC', '#3867D6', '#45AAF2', '#2D98DA', '#0FB9B1',
+        '#FFC107', '#FF9800', '#FF5722', '#F44336', '#E91E63'
+    ];
+    
+    // Configuração e renderização dos gráficos
+    document.addEventListener('DOMContentLoaded', function() {
+        // Gráfico de Macroáreas
+        if (chartsData.macroareas.labels.length > 0) {
+            const macroareaCtx = document.getElementById('macroareaChart').getContext('2d');
+            new Chart(macroareaCtx, {
+                type: 'pie',
+                data: {
+                    labels: chartsData.macroareas.labels,
+                    datasets: [{
+                        data: chartsData.macroareas.values,
+                        backgroundColor: colors.slice(0, chartsData.macroareas.labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('macroareaChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
+        }
+        
+        // Gráfico de Segmentos
+        if (chartsData.segmentos.labels.length > 0) {
+            const segmentosCtx = document.getElementById('segmentosChart').getContext('2d');
+            new Chart(segmentosCtx, {
+                type: 'bar',
+                data: {
+                    labels: chartsData.segmentos.labels,
+                    datasets: [{
+                        label: 'Projetos por Segmento',
+                        data: chartsData.segmentos.values,
+                        backgroundColor: '#009260',
+                        borderColor: '#1A6354',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            grid: {
+                                display: true,
+                                drawBorder: false
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('segmentosChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
+        }
+        
+        // Gráfico de Tecnologia Verde
+        if (chartsData.tecverde.labels.length > 0) {
+            const tecverdeCtx = document.getElementById('tecverdeChart').getContext('2d');
+            new Chart(tecverdeCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: chartsData.tecverde.labels,
+                    datasets: [{
+                        data: chartsData.tecverde.values,
+                        backgroundColor: colors.slice(0, chartsData.tecverde.labels.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('tecverdeChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
+        }
+        
+        // Gráfico de Timeline
+        if (chartsData.timeline.labels.length > 0) {
+            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+            new Chart(timelineCtx, {
+                type: 'line',
+                data: {
+                    labels: chartsData.timeline.labels,
+                    datasets: [{
+                        label: 'Projetos por Mês',
+                        data: chartsData.timeline.values,
+                        backgroundColor: 'rgba(0, 146, 96, 0.2)',
+                        borderColor: '#009260',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true,
+                        pointBackgroundColor: '#1A6354',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            document.getElementById('timelineChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
+        }
+    });
+</script>
+{% endblock %}

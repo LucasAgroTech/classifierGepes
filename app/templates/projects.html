@@ -494,7 +494,7 @@
         </div>
     </div>
     <div class="user-info">
-        <a href="#" class="header-btn dashboard-btn">
+        <a href="{{ url_for('dashboard.index') }}" class="header-btn dashboard-btn">
             <i class="fas fa-tachometer-alt"></i> Dashboard
         </a>
         <a href="{{ url_for('main.logout') }}" class="header-btn logout-btn">
