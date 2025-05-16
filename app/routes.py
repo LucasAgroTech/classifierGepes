@@ -167,31 +167,42 @@ def _get_tecverde_subclasses():
     return openai_client._get_tecverde_subclasses()
 
 def _get_ai_ratings(project_id):
-    """Obtém as avaliações da IA para um projeto."""
-    from app.routes_ai_ratings import get_ai_rating
-    
-    # Obter avaliações para este projeto e usuário
-    user_id = current_user.email if current_user.is_authenticated else None
-    
-    if not user_id:
-        return None
+    """Obtém as avaliações mais recentes da IA para um projeto, independente do usuário."""
+    from app.models import AIRating
     
     # Verificar se project_id é um objeto Projeto ou um ID
     if isinstance(project_id, int) or (isinstance(project_id, str) and project_id.isdigit()):
         # É um ID numérico, usar diretamente
-        project_code = project_id
+        project_id_num = int(project_id)
     else:
         # Pode ser um objeto Projeto ou um código de projeto
-        if hasattr(project_id, 'codigo_projeto'):
+        if hasattr(project_id, 'id'):
             # É um objeto Projeto
-            project_code = project_id.codigo_projeto
+            project_id_num = project_id.id
+        elif hasattr(project_id, 'codigo_projeto'):
+            # É um objeto Projeto, mas precisamos buscar o ID pelo código
+            from app.models import Projeto
+            projeto = Projeto.query.filter_by(codigo_projeto=project_id.codigo_projeto).first()
+            project_id_num = projeto.id if projeto else None
         else:
             # Assumir que é um código de projeto
-            project_code = project_id
+            from app.models import Projeto
+            projeto = Projeto.query.filter_by(codigo_projeto=project_id).first()
+            project_id_num = projeto.id if projeto else None
     
-    # Carregar avaliações
-    aia_rating = get_ai_rating(project_code, user_id, 'aia')
-    tecverde_rating = get_ai_rating(project_code, user_id, 'tecverde')
+    if not project_id_num:
+        return None
+    
+    # Buscar as avaliações mais recentes para cada tipo
+    aia_rating = AIRating.query.filter_by(
+        id_projeto=project_id_num,
+        tipo='aia'
+    ).order_by(AIRating.timestamp.desc()).first()
+    
+    tecverde_rating = AIRating.query.filter_by(
+        id_projeto=project_id_num,
+        tipo='tecverde'
+    ).order_by(AIRating.timestamp.desc()).first()
     
     return {
         'aia': aia_rating.to_dict() if aia_rating else {'rating': 0, 'observacoes': ''},
@@ -421,23 +432,21 @@ def log_categorization(project_id, used_ai=False, validation_info=None, user_mod
             usuario_modificou=user_modified
         )
         
-        # Se há avaliações da IA para este projeto e usuário, registrar
-        from app.routes_ai_ratings import get_ai_rating
-        
-        user_id = current_user.email if current_user.is_authenticated else 'sistema'
+        # Se há avaliações da IA para este projeto, registrar a mais recente
+        from app.routes_ai_ratings import get_latest_ai_rating
         
         # Verificar se project_id é um objeto Projeto ou um ID
         project_code = project_id
         if hasattr(projeto, 'codigo_projeto'):
             project_code = projeto.codigo_projeto
         
-        # Carregar avaliação para Área de Interesse de Aplicação
-        aia_rating = get_ai_rating(project_code, user_id, 'aia')
+        # Carregar avaliação mais recente para Área de Interesse de Aplicação
+        aia_rating = get_latest_ai_rating(project_code, 'aia')
         if aia_rating:
             log.ai_rating_aia = aia_rating.rating
         
-        # Carregar avaliação para Tecnologias Verdes
-        tecverde_rating = get_ai_rating(project_code, user_id, 'tecverde')
+        # Carregar avaliação mais recente para Tecnologias Verdes
+        tecverde_rating = get_latest_ai_rating(project_code, 'tecverde')
         if tecverde_rating:
             log.ai_rating_tecverde = tecverde_rating.rating
         

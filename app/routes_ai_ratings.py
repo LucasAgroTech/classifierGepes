@@ -43,6 +43,38 @@ def get_ai_rating(project_id, user_id, tipo):
         logger.error(f"Erro ao obter avaliação da IA: {str(e)}")
         return None
 
+# Função para obter a avaliação mais recente, independente do usuário
+def get_latest_ai_rating(project_id, tipo):
+    """
+    Obtém a avaliação mais recente da IA para um projeto, independente do usuário.
+    
+    Args:
+        project_id: ID ou código do projeto
+        tipo: Tipo da avaliação ('aia' ou 'tecverde')
+        
+    Returns:
+        Objeto AIRating ou None se não encontrado
+    """
+    try:
+        # Verificar se project_id é um inteiro (ID interno) ou uma string (código do projeto)
+        if isinstance(project_id, str) and not project_id.isdigit():
+            # É um código de projeto, precisamos obter o ID interno
+            projeto = Projeto.query.filter_by(codigo_projeto=project_id).first()
+            if not projeto:
+                return None
+            project_id = projeto.id
+        
+        # Buscar a avaliação mais recente para este projeto e tipo
+        rating = AIRating.query.filter_by(
+            id_projeto=project_id,
+            tipo=tipo
+        ).order_by(AIRating.timestamp.desc()).first()
+        
+        return rating
+    except Exception as e:
+        logger.error(f"Erro ao obter avaliação mais recente da IA: {str(e)}")
+        return None
+
 # Rota para avaliação da IA
 @ai_ratings_bp.route('/save', methods=['POST'])
 @login_required
