@@ -3,6 +3,7 @@
 {% block title %}Dashboard - gepesClassifier{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css') }}">
 <style>
     /* Estilos gerais do dashboard */
     .dashboard-header {
@@ -716,6 +717,7 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
 <script>
     // Inicializar gráficos com os dados do backend
     const chartsData = {{ charts_data|safe }};

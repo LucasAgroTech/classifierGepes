@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
@@ -15,6 +15,10 @@ login_manager.login_message_category = 'warning'
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    
+    # Verificar se a chave da API OpenAI está configurada
+    if not os.environ.get('OPENAI_API_KEY'):
+        app.logger.warning("OPENAI_API_KEY não está configurada. O chatbot RAG não funcionará corretamente.")
     
     # Inicializar extensões
     db.init_app(app)
@@ -35,6 +39,10 @@ def create_app(config_class=Config):
     # Registrar blueprint para dashboard
     from app.routes_dashboard import dashboard_bp
     app.register_blueprint(dashboard_bp)
+    
+    # Registrar blueprint para o chatbot
+    from app.routes_chat import chat_bp
+    app.register_blueprint(chat_bp, url_prefix='/chat')
     
     # Criar tabelas se não existirem (apenas para desenvolvimento)
     with app.app_context():
