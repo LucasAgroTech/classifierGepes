@@ -164,6 +164,7 @@ class CategoriaLista(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tipo = db.Column(db.Text, nullable=False)
     valor = db.Column(db.Text, nullable=False)
+    descricao = db.Column(db.Text)
     ativo = db.Column(db.Boolean, default=True)
     
     __table_args__ = (

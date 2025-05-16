@@ -844,7 +844,7 @@ function fixClasseAndSubclasse() {
         const selector = type === 'tecverde' ? '[data-type="tecverde"]' : ':not([data-type])';
         const ratingInput = type === 'tecverde' ? '#tecverde-rating-value' : '#aia-rating-value';
         const ratingText = type === 'tecverde' ? '#tecverde-rating-text' : '#aia-rating-text';
-        const saveButton = type === 'tecverde' ? '#saveTecverdeRatingBtn' : '#saveAiaRatingBtn';
+        // Removemos a referência ao botão de salvar, pois o evento será gerenciado pelo save_all.js
         const observacoesInput = type === 'tecverde' ? '#tecverde-rating-observacoes' : '#aia-rating-observacoes';
         
         // Carregar avaliação existente
@@ -882,80 +882,8 @@ function fixClasseAndSubclasse() {
             $(ratingText).text(ratingMessage);
         }
         
-        // Evento de clique no botão salvar
-        $(saveButton).on('click', function() {
-            const rating = parseInt($(ratingInput).val());
-            if (rating === 0) {
-                // Mostrar alerta se nenhuma estrela for selecionada
-                Swal.fire({
-                    title: 'Avaliação necessária',
-                    text: 'Por favor, selecione uma classificação (de 1 a 5 estrelas)',
-                    icon: 'warning',
-                    confirmButtonColor: '#3085d6',
-                    confirmButtonText: 'OK'
-                });
-                return;
-            }
-            
-            const observacoes = $(observacoesInput).val();
-            const projectId = $('#project_id').val();
-            
-            // Preparar dados para envio
-            const data = {
-                project_id: projectId,
-                rating: rating,
-                observacoes: observacoes,
-                tipo: type
-            };
-            
-            // Enviar via AJAX
-            $.ajax({
-                url: `/api/ratings/save`,
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                beforeSend: function() {
-                    // Mostrar loading
-                    $(saveButton).html('<i class="fas fa-spinner fa-spin me-1"></i>Salvando...');
-                    $(saveButton).prop('disabled', true);
-                },
-                success: function(response) {
-                    // Mostrar mensagem de sucesso
-                    $(saveButton).html('<i class="fas fa-check-circle me-1"></i>Salvo!');
-                    setTimeout(function() {
-                        $(saveButton).html('<i class="fas fa-save me-1"></i>Salvar Avaliação');
-                        $(saveButton).prop('disabled', false);
-                    }, 2000);
-                    
-                    // Exibir notificação
-                    Swal.fire({
-                        title: 'Avaliação salva',
-                        text: 'Sua avaliação foi registrada com sucesso',
-                        icon: 'success',
-                        timer: 2000,
-                        timerProgressBar: true,
-                        showConfirmButton: false
-                    });
-                    
-                    console.log(`Avaliação ${type} salva com sucesso:`, response);
-                },
-                error: function(xhr, status, error) {
-                    // Mostrar mensagem de erro
-                    $(saveButton).html('<i class="fas fa-save me-1"></i>Salvar Avaliação');
-                    $(saveButton).prop('disabled', false);
-                    
-                    Swal.fire({
-                        title: 'Erro!',
-                        text: xhr.responseJSON && xhr.responseJSON.error ? xhr.responseJSON.error : 'Erro ao salvar avaliação',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-                    
-                    console.error(`Erro ao salvar avaliação ${type}:`, error);
-                    console.error('Resposta do servidor:', xhr.responseText);
-                }
-            });
-        });
+        // Removido o evento de clique no botão salvar para evitar duplicação
+        // O evento agora é gerenciado exclusivamente pelo arquivo save_all.js
     }
     
     // Inicializar sistemas de avaliação se estiverem disponíveis na página

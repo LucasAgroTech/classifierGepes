@@ -1874,6 +1874,13 @@
             $('.collapse-icon i').toggleClass('fa-chevron-up fa-chevron-down');
         });
         
+        // Adicionar a mesma funcionalidade para o botão de colapso
+        $('.collapse-icon').on('click', function(e) {
+            // Impedir que o evento se propague para o header
+            e.stopPropagation();
+            $(this).find('i').toggleClass('fa-chevron-up fa-chevron-down');
+        });
+        
         // Funcionalidade para expandir/colapsar o formulário de categorização
         $('#toggleFormBtn').on('click', function() {
             $('#categorizationFormContent').slideToggle();

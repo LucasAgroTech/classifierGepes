@@ -11,6 +11,80 @@
         align-items: center;
     }
     
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+        background-color: var(--primary-bg-light);
+        padding: 0.5rem 0.8rem;
+        border-radius: 50rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+    
+    .user-name {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--primary-dark);
+        display: flex;
+        align-items: center;
+        line-height: 1;
+    }
+    
+    .user-name i {
+        margin-right: 0.5rem;
+        color: var(--primary-color);
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .header-btn {
+        color: white;
+        border: none;
+        padding: 0.4rem 0.9rem;
+        font-size: 0.85rem;
+        border-radius: 50rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+    
+    .header-btn i {
+        margin-right: 0.4rem;
+    }
+    
+    .dashboard-btn {
+        background-color: var(--primary-color);
+        margin-right: 0.2rem;
+    }
+    
+    .dashboard-btn:hover {
+        background-color: var(--primary-dark);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(26, 99, 84, 0.3);
+    }
+    
+    .logout-btn {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    }
+    
+    .logout-btn:hover {
+        background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-color) 100%);
+        color: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(26, 99, 84, 0.4);
+    }
+    
+    .header-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+    
     /* Estilos para o container e linha de filtros */
     .filters-container {
         width: 100%;
@@ -419,6 +493,14 @@
             </p>
         </div>
     </div>
+    <div class="user-info">
+        <a href="#" class="header-btn dashboard-btn">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="{{ url_for('main.logout') }}" class="header-btn logout-btn">
+            <i class="fas fa-sign-out-alt"></i> Sair
+        </a>
+    </div>
 </div>
 
 <!-- Filtros abaixo do header -->
@@ -439,6 +521,26 @@
             <option value="all">Todas</option>
             <option value="sim">Sim</option>
             <option value="nao">Não</option>
+            {% if tecverde_classes %}
+                <optgroup label="Classes">
+                    {% for classe, descricao in tecverde_classes.items() %}
+                    <option value="classe:{{ classe }}">{{ classe }}</option>
+                    {% endfor %}
+                </optgroup>
+                <optgroup label="Subclasses">
+                    {% for classe, subclasses in tecverde_subclasses.items() %}
+                        {% if subclasses %}
+                            {% set subclasses_list = subclasses.split(';') if ';' in subclasses else subclasses.split(',') if ',' in subclasses else [subclasses] %}
+                            {% for subclasse in subclasses_list %}
+                                {% set subclasse_clean = subclasse.strip() %}
+                                {% if subclasse_clean %}
+                                <option value="subclasse:{{ subclasse_clean }}">{{ subclasse_clean }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </optgroup>
+            {% endif %}
         </select>
     </div>
     <div class="search-container">
@@ -652,6 +754,73 @@
     }
 
     $(document).ready(function() {
+        // Ordenar os projetos iniciais por status
+        (function sortInitialProjects() {
+            // Obter todas as linhas da tabela
+            var rows = $("#projectsTable tbody tr.clickable-row").toArray();
+            
+            // Ordenar as linhas com base no texto do badge de status
+            rows.sort(function(a, b) {
+                var statusA = $(a).find(".badge").first().text();
+                var statusB = $(b).find(".badge").first().text();
+                
+                // Definir a ordem de prioridade dos status
+                const statusOrder = {
+                    "Não Classificado": 1,
+                    "Classificado por IA": 2,
+                    "Validado por Humano": 3
+                };
+                
+                return statusOrder[statusA] - statusOrder[statusB];
+            });
+            
+            // Reordenar as linhas na tabela
+            $.each(rows, function(index, row) {
+                $("#projectsTable tbody").append(row);
+            });
+        })();
+        
+        // Verificar se há filtros na URL e aplicá-los
+        (function applyUrlFilters() {
+            // Obter parâmetros da URL
+            var urlParams = new URLSearchParams(window.location.search);
+            var hasFilters = false;
+            
+            // Aplicar filtro de categoria se presente na URL
+            if (urlParams.has('filter')) {
+                var filterValue = urlParams.get('filter');
+                if (filterValue && filterValue !== 'all') {
+                    $("#categoryFilter").val(filterValue);
+                    hasFilters = true;
+                }
+            }
+            
+            // Aplicar filtro de tecverde se presente na URL
+            if (urlParams.has('tecverde')) {
+                var tecverdeValue = urlParams.get('tecverde');
+                if (tecverdeValue && tecverdeValue !== 'all') {
+                    $("#tecVerdeFilter").val(tecverdeValue);
+                    hasFilters = true;
+                }
+            }
+            
+            // Aplicar filtro de busca se presente na URL
+            if (urlParams.has('search')) {
+                var searchValue = urlParams.get('search');
+                if (searchValue) {
+                    $("#searchInput").val(searchValue);
+                    hasFilters = true;
+                }
+            }
+            
+            // Se há filtros na URL, atualizar o contador com o total filtrado
+            if (hasFilters) {
+                // O total já está correto pois o backend aplicou os filtros
+                var totalFiltered = parseInt($("#totalProjectsCount").val());
+                updateProjectCountBadge(totalFiltered);
+            }
+        })();
+        
         // Armazenar o total de projetos em uma variável
         var totalProjects = parseInt($("#totalProjectsCount").val());
         
@@ -754,22 +923,48 @@
                     }
                 }
                 
-                // Verificar filtro de Tec Verde usando abordagem booleana
+                // Verificar filtro de Tec Verde
                 if (tecVerdeFilter !== "all") {
-                    // Obter o valor booleano da célula Tec Verde (7ª coluna)
+                    // Obter a célula Tec Verde (7ª coluna)
                     var tecVerdeCell = row.find("td:nth-child(7)");
                     var isTecVerde = false;
+                    var tecVerdeClasse = "";
+                    var tecVerdeSubclasse = "";
                     
                     // Verificar se a célula contém "Sim" - isso indica que tecverde_se_aplica é true
                     if (tecVerdeCell.find(".project-code").text().trim() === "Sim") {
                         isTecVerde = true;
+                        
+                        // Extrair classe e subclasse do tooltip se disponível
+                        var tooltipTitle = tecVerdeCell.find("[data-bs-toggle='tooltip']").attr("title");
+                        if (tooltipTitle) {
+                            // Extrair classe do tooltip
+                            var classeMatch = tooltipTitle.match(/<strong>Classe:<\/strong>\s*([^<]+)/);
+                            if (classeMatch && classeMatch[1]) {
+                                tecVerdeClasse = classeMatch[1].trim();
+                            }
+                            
+                            // Extrair subclasse do tooltip
+                            var subclasseMatch = tooltipTitle.match(/<strong>Subclasse:<\/strong>\s*([^<]+)/);
+                            if (subclasseMatch && subclasseMatch[1]) {
+                                tecVerdeSubclasse = subclasseMatch[1].trim();
+                            }
+                        }
                     }
                     
-                    // Aplicar o filtro baseado no valor booleano
+                    // Aplicar o filtro baseado no valor selecionado
                     if (tecVerdeFilter === "sim") {
                         tecVerdeMatch = isTecVerde === true;
                     } else if (tecVerdeFilter === "nao") {
                         tecVerdeMatch = isTecVerde === false;
+                    } else if (tecVerdeFilter.startsWith("classe:")) {
+                        // Filtrar por classe específica
+                        var classeFilter = tecVerdeFilter.substring(7); // Remove "classe:"
+                        tecVerdeMatch = isTecVerde && tecVerdeClasse === classeFilter;
+                    } else if (tecVerdeFilter.startsWith("subclasse:")) {
+                        // Filtrar por subclasse específica
+                        var subclasseFilter = tecVerdeFilter.substring(10); // Remove "subclasse:"
+                        tecVerdeMatch = isTecVerde && tecVerdeSubclasse === subclasseFilter;
                     }
                 }
                 
@@ -789,10 +984,15 @@
             checkNoResults(textValue);
         }
         
-        // Função para atualizar o contador de projetos
+        // Função para atualizar o badge de contagem de projetos com o total filtrado
+        function updateProjectCountBadge(count) {
+            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + count.toLocaleString('pt-BR').replace(',', '.'));
+        }
+        
+        // Função para atualizar o contador de projetos (mantida para compatibilidade)
         function updateProjectCount() {
-            var visibleRows = $("#projectsTable tbody tr:visible").not("#noResults").length;
-            $(".project-count-badge").html('<i class="fas fa-folder count-icon"></i> ' + visibleRows.toLocaleString('pt-BR').replace(',', '.'));
+            // Esta função agora não faz nada, pois o contador é atualizado com o total filtrado do servidor
+            // Mantida para compatibilidade com o código existente
         }
         
         // Função para verificar se não há resultados e mostrar mensagem
@@ -1012,6 +1212,11 @@
                         hasNextPage = data.has_next;
                         nextPage = data.next_page;
                         
+                        // Atualizar o contador de projetos com o total filtrado
+                        if (data.total !== undefined) {
+                            updateProjectCountBadge(data.total);
+                        }
+                        
                         // Inicializar eventos para as novas linhas
                         initClickableRows();
                         
@@ -1037,11 +1242,34 @@
             });
         }
         
-        // Função para adicionar projetos à tabela
-        function appendProjects(projects) {
-            var tbody = $("#projectsTable tbody");
+    // Função para ordenar projetos por status
+    function sortProjectsByStatus(projects) {
+        // Definir a ordem de prioridade dos status
+        const statusOrder = {
+            "Não Classificado": 1,
+            "Classificado por IA": 2,
+            "Validado por Humano": 3
+        };
+        
+        // Criar uma cópia do array para não modificar o original
+        return [...projects].sort(function(a, b) {
+            // Determinar o status de cada projeto
+            const statusA = a.human_validated ? "Validado por Humano" : (a.ai_classified ? "Classificado por IA" : "Não Classificado");
+            const statusB = b.human_validated ? "Validado por Humano" : (b.ai_classified ? "Classificado por IA" : "Não Classificado");
             
-            projects.forEach(function(project) {
+            // Comparar baseado na ordem definida
+            return statusOrder[statusA] - statusOrder[statusB];
+        });
+    }
+    
+    // Função para adicionar projetos à tabela
+    function appendProjects(projects) {
+        var tbody = $("#projectsTable tbody");
+        
+        // Ordenar projetos por status antes de adicionar à tabela
+        const sortedProjects = sortProjectsByStatus(projects);
+        
+        sortedProjects.forEach(function(project) {
                 var row = $('<tr class="clickable-row"></tr>');
                 row.attr('data-href', '/categorize/' + project.codigo_projeto);
                 

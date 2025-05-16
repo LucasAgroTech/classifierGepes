@@ -38,8 +38,8 @@ def _get_categories_lists():
     """Obtém as listas de categorias do banco de dados."""
     organized_lists = {}
     
-    # Obter todas as categorias ativas
-    all_categories = CategoriaLista.query.filter_by(ativo=True).all()
+    # Obter todas as categorias ativas usando a query segura
+    all_categories = _get_categoria_lista_query().filter_by(ativo=True).all()
     
     # Inicializar listas vazias para cada tipo
     for tipo in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
@@ -157,24 +157,14 @@ def _get_aia_data():
     ]
 
 def _get_tecverde_classes():
-    """Simula a obtenção das classes de tecnologias verdes."""
-    return {
-        "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
-        "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
-        "Transporte": "Tecnologias de transporte com menor impacto ambiental",
-        "Conservação": "Tecnologias para conservação de recursos naturais",
-        "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
-    }
+    """Obtém as classes de tecnologias verdes do banco de dados usando o método do OpenAIClient."""
+    openai_client = OpenAIClient(Config.get_openai_api_key())
+    return openai_client._get_tecverde_classes()
 
 def _get_tecverde_subclasses():
-    """Simula a obtenção das subclasses de tecnologias verdes."""
-    return {
-        "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
-        "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
-        "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
-        "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
-        "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
-    }
+    """Obtém as subclasses de tecnologias verdes do banco de dados usando o método do OpenAIClient."""
+    openai_client = OpenAIClient(Config.get_openai_api_key())
+    return openai_client._get_tecverde_subclasses()
 
 def _get_ai_ratings(project_id):
     """Obtém as avaliações da IA para um projeto."""
@@ -259,6 +249,12 @@ def projects():
         tecverde_filter = request.args.get('tecverde', 'all')
         is_ajax = request.args.get('ajax', '0') == '1'
         
+        # Obter classes e subclasses de tecnologias verdes do banco de dados
+        from app.ai_integration import OpenAIClient
+        openai_client = OpenAIClient(Config.get_openai_api_key())
+        tecverde_classes = openai_client._get_tecverde_classes()
+        tecverde_subclasses = openai_client._get_tecverde_subclasses()
+        
         # Carregar projetos com eager loading para evitar consultas N+1
         from sqlalchemy.orm import joinedload
         from sqlalchemy import or_
@@ -306,6 +302,20 @@ def projects():
             elif tecverde_filter == 'nao':
                 # Projetos com Tec Verde = False
                 query = query.filter(Projeto.tecverde_se_aplica == False)
+            elif tecverde_filter.startswith('classe:'):
+                # Filtrar por classe específica
+                classe = tecverde_filter[7:]  # Remove 'classe:'
+                query = query.filter(
+                    Projeto.tecverde_se_aplica == True,
+                    Projeto.tecverde_classe == classe
+                )
+            elif tecverde_filter.startswith('subclasse:'):
+                # Filtrar por subclasse específica
+                subclasse = tecverde_filter[10:]  # Remove 'subclasse:'
+                query = query.filter(
+                    Projeto.tecverde_se_aplica == True,
+                    Projeto.tecverde_subclasse == subclasse
+                )
         
         # Executar a consulta com paginação
         projects_query = query.paginate(page=page, per_page=per_page, error_out=False)
@@ -375,7 +385,9 @@ def projects():
             pagination=projects_query,
             total_projects=projects_query.total,
             has_next=projects_query.has_next,
-            next_page=projects_query.next_num if projects_query.has_next else None
+            next_page=projects_query.next_num if projects_query.has_next else None,
+            tecverde_classes=tecverde_classes,
+            tecverde_subclasses=tecverde_subclasses
         )
         
     except Exception as e:
@@ -455,6 +467,43 @@ def get_project_logs(project_id):
     except Exception as e:
         logger.error(f"Erro ao obter logs do projeto: {str(e)}")
         return []
+
+# Função para obter categorias do banco de dados de forma segura
+def _get_categoria_lista_query():
+    """
+    Retorna uma query para CategoriaLista que é segura mesmo se a coluna 'descricao' não existir.
+    """
+    try:
+        # Verificar se a coluna 'descricao' existe na tabela
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        columns = [col['name'] for col in inspector.get_columns('categoria_listas', schema='gepes')]
+        
+        if 'descricao' in columns:
+            # Se a coluna existe, incluí-la na query
+            return CategoriaLista.query
+        else:
+            # Se a coluna não existe, criar uma query que não inclui a coluna
+            from sqlalchemy import select
+            from sqlalchemy.orm import aliased
+            
+            # Criar um alias para a tabela CategoriaLista
+            CategoriaListaAlias = aliased(CategoriaLista)
+            
+            # Criar uma query que seleciona apenas as colunas que existem
+            query = select(
+                CategoriaListaAlias.id,
+                CategoriaListaAlias.tipo,
+                CategoriaListaAlias.valor,
+                CategoriaListaAlias.ativo
+            ).select_from(CategoriaListaAlias)
+            
+            # Converter para uma query SQLAlchemy
+            return db.session.query(CategoriaListaAlias.id, CategoriaListaAlias.tipo, CategoriaListaAlias.valor, CategoriaListaAlias.ativo)
+    except Exception as e:
+        logger.error(f"Erro ao criar query para CategoriaLista: {str(e)}")
+        # Em caso de erro, retornar uma query simples que não inclui a coluna 'descricao'
+        return db.session.query(CategoriaLista.id, CategoriaLista.tipo, CategoriaLista.valor, CategoriaLista.ativo)
 
 # Rota para categorização de um projeto
 @main.route('/categorize/<project_id>', methods=['GET', 'POST'])
@@ -838,7 +887,7 @@ def add_dominio():
         valor_dominio = f"{microarea}|{segmento}|{novo_dominio}"
         
         # Verificar se o domínio já existe
-        existente = CategoriaLista.query.filter_by(
+        existente = _get_categoria_lista_query().filter_by(
             tipo='dominio', 
             valor=valor_dominio
         ).first()
@@ -1100,22 +1149,9 @@ def view_categories():
                 organized_categories[macroarea] = []
             organized_categories[macroarea].append(category)
         
-        # Obter dados de tecnologias verdes
-        tecverde_classes = {
-            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
-            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
-            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
-            "Conservação": "Tecnologias para conservação de recursos naturais",
-            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
-        }
-        
-        tecverde_subclasses = {
-            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
-            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
-            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
-            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
-            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
-        }
+        # Obter dados de tecnologias verdes do banco de dados
+        tecverde_classes = _get_tecverde_classes()
+        tecverde_subclasses = _get_tecverde_subclasses()
         
         return render_template('categories.html', 
                               categories=organized_categories,
@@ -1227,7 +1263,7 @@ def lists():
         for column in ['tecnologias_habilitadoras', 'areas_aplicacao', 'microarea', 'segmento', 'dominio']:
             # Usar o mapeamento para obter o tipo correto no banco de dados
             db_tipo = tipo_mapping.get(column, column)
-            items = CategoriaLista.query.filter_by(tipo=db_tipo, ativo=True).all()
+            items = _get_categoria_lista_query().filter_by(tipo=db_tipo, ativo=True).all()
             
             # Para segmentos e domínios, extrair apenas a parte relevante do valor
             if column == 'segmento' or column == 'dominio':

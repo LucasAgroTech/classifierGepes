@@ -3,6 +3,8 @@ import json
 import logging
 from datetime import datetime
 from app.models import AISuggestion, CategoriaLista, db
+from sqlalchemy import inspect, select
+from sqlalchemy.orm import aliased
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -12,6 +14,38 @@ class OpenAIClient:
     def __init__(self, api_key):
         self.api_key = api_key
         self.client = OpenAI(api_key=api_key)
+    
+    def _get_categoria_lista_query(self):
+        """
+        Retorna uma query para CategoriaLista que é segura mesmo se a coluna 'descricao' não existir.
+        """
+        try:
+            # Verificar se a coluna 'descricao' existe na tabela
+            inspector = inspect(db.engine)
+            columns = [col['name'] for col in inspector.get_columns('categoria_listas', schema='gepes')]
+            
+            if 'descricao' in columns:
+                # Se a coluna existe, incluí-la na query
+                return CategoriaLista.query
+            else:
+                # Se a coluna não existe, criar uma query que não inclui a coluna
+                # Criar um alias para a tabela CategoriaLista
+                CategoriaListaAlias = aliased(CategoriaLista)
+                
+                # Criar uma query que seleciona apenas as colunas que existem
+                query = select(
+                    CategoriaListaAlias.id,
+                    CategoriaListaAlias.tipo,
+                    CategoriaListaAlias.valor,
+                    CategoriaListaAlias.ativo
+                ).select_from(CategoriaListaAlias)
+                
+                # Converter para uma query SQLAlchemy
+                return db.session.query(CategoriaListaAlias.id, CategoriaListaAlias.tipo, CategoriaListaAlias.valor, CategoriaListaAlias.ativo)
+        except Exception as e:
+            logger.error(f"Erro ao criar query para CategoriaLista: {str(e)}")
+            # Em caso de erro, retornar uma query simples que não inclui a coluna 'descricao'
+            return db.session.query(CategoriaLista.id, CategoriaLista.tipo, CategoriaLista.valor, CategoriaLista.ativo)
     
     def _get_categories_lists(self):
         """Obtém as listas de categorias do banco de dados."""
@@ -32,8 +66,8 @@ class OpenAIClient:
         dominios_por_microarea_segmento = {}
         
         try:
-            # Obter todas as categorias ativas
-            all_categories = CategoriaLista.query.filter_by(ativo=True).all()
+            # Obter todas as categorias ativas usando a query segura
+            all_categories = self._get_categoria_lista_query().filter_by(ativo=True).all()
             
             # Log para depuração
             logger.info(f"Recuperadas {len(all_categories)} categorias ativas do banco de dados")
@@ -192,30 +226,108 @@ class OpenAIClient:
     
     def _get_tecverde_classes(self):
         """Obtém as classes de tecnologias verdes do banco de dados."""
-        # Buscar classes de tecnologias verdes no banco de dados
-        # Por enquanto, usamos dados predefinidos para exemplo
-        tecverde_classes = {
-            "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
-            "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
-            "Transporte": "Tecnologias de transporte com menor impacto ambiental",
-            "Conservação": "Tecnologias para conservação de recursos naturais",
-            "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
-        }
+        tecverde_classes = {}
+        
+        try:
+            # Buscar classes de tecnologias verdes no banco de dados usando a query segura
+            classes = self._get_categoria_lista_query().filter_by(tipo='tecverde_classe', ativo=True).all()
+            
+            # Se não encontrou nenhuma classe, usar dados predefinidos para exemplo
+            if not classes:
+                logger.warning("Nenhuma classe de tecnologia verde encontrada no banco de dados. Usando dados predefinidos.")
+                tecverde_classes = {
+                    "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+                    "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+                    "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+                    "Conservação": "Tecnologias para conservação de recursos naturais",
+                    "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+                }
+            else:
+                # Processar as classes encontradas no banco de dados
+                for classe in classes:
+                    # O valor contém o nome da classe
+                    nome_classe = classe.valor
+                    
+                    # A descrição pode estar em um campo adicional ou ser extraída do valor
+                    # Verificar se o atributo 'descricao' existe no objeto e na tabela
+                    try:
+                        descricao = classe.descricao if hasattr(classe, 'descricao') else "Tecnologia verde"
+                    except Exception as e:
+                        # Se ocorrer um erro ao acessar o atributo (por exemplo, se a coluna não existir no banco de dados)
+                        logger.warning(f"Erro ao acessar atributo 'descricao': {str(e)}. Usando valor padrão.")
+                        descricao = "Tecnologia verde"
+                    
+                    tecverde_classes[nome_classe] = descricao
+                
+                logger.info(f"Carregadas {len(tecverde_classes)} classes de tecnologias verdes do banco de dados")
+        except Exception as e:
+            logger.error(f"Erro ao obter classes de tecnologias verdes do banco de dados: {str(e)}")
+            # Em caso de erro, usar dados predefinidos
+            tecverde_classes = {
+                "Energias alternativas": "Tecnologias relacionadas a fontes de energia alternativas",
+                "Gestão Ambiental": "Tecnologias de gerenciamento e controle do impacto ambiental",
+                "Transporte": "Tecnologias de transporte com menor impacto ambiental",
+                "Conservação": "Tecnologias para conservação de recursos naturais",
+                "Agricultura Sustentável": "Métodos agrícolas que minimizam impacto ambiental"
+            }
         
         logger.info(f"Classes de tecnologias verdes disponíveis: {list(tecverde_classes.keys())}")
         return tecverde_classes
     
     def _get_tecverde_subclasses(self):
         """Obtém as subclasses de tecnologias verdes do banco de dados."""
-        # Buscar subclasses de tecnologias verdes no banco de dados
-        # Por enquanto, usamos dados predefinidos para exemplo
-        tecverde_subclasses = {
-            "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
-            "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
-            "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
-            "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
-            "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
-        }
+        tecverde_subclasses = {}
+        
+        try:
+            # Buscar subclasses de tecnologias verdes no banco de dados usando a query segura
+            subclasses = self._get_categoria_lista_query().filter_by(tipo='tecverde_subclasse', ativo=True).all()
+            
+            # Se não encontrou nenhuma subclasse, usar dados predefinidos para exemplo
+            if not subclasses:
+                logger.warning("Nenhuma subclasse de tecnologia verde encontrada no banco de dados. Usando dados predefinidos.")
+                tecverde_subclasses = {
+                    "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+                    "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+                    "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+                    "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+                    "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+                }
+            else:
+                # Processar as subclasses encontradas no banco de dados
+                for subclasse in subclasses:
+                    # O valor contém o nome da classe e as subclasses no formato "Classe|Subclasse1; Subclasse2; Subclasse3"
+                    valor = subclasse.valor
+                    
+                    # Verificar se o atributo 'descricao' existe no objeto e na tabela
+                    try:
+                        # Tentar acessar o atributo 'descricao' (não usado neste método, mas verificamos para consistência)
+                        _ = subclasse.descricao if hasattr(subclasse, 'descricao') else None
+                    except Exception as e:
+                        # Se ocorrer um erro ao acessar o atributo, logar o erro
+                        logger.warning(f"Erro ao acessar atributo 'descricao': {str(e)}. Isso não afeta o processamento de subclasses.")
+                    
+                    if '|' in valor:
+                        partes = valor.split('|')
+                        if len(partes) >= 2:
+                            classe = partes[0].strip()
+                            subclasses_str = partes[1].strip()
+                            
+                            # Adicionar as subclasses para esta classe
+                            tecverde_subclasses[classe] = subclasses_str
+                    else:
+                        logger.warning(f"Formato inválido para subclasse: {valor}. Esperado formato 'Classe|Subclasse1; Subclasse2'")
+                
+                logger.info(f"Carregadas subclasses para {len(tecverde_subclasses)} classes de tecnologias verdes do banco de dados")
+        except Exception as e:
+            logger.error(f"Erro ao obter subclasses de tecnologias verdes do banco de dados: {str(e)}")
+            # Em caso de erro, usar dados predefinidos
+            tecverde_subclasses = {
+                "Energias alternativas": "Solar; Eólica; Biomassa; Geotérmica; Hidrogênio",
+                "Gestão Ambiental": "Tratamento de resíduos; Controle de poluição; Monitoramento ambiental; Remediação",
+                "Transporte": "Veículos elétricos; Biocombustíveis; Mobilidade urbana sustentável",
+                "Conservação": "Conservação de água; Conservação de biodiversidade; Reflorestamento",
+                "Agricultura Sustentável": "Agricultura orgânica; Agricultura de precisão; Agroecologia; Sistemas agroflorestais"
+            }
         
         # Logar as subclasses disponíveis para cada classe
         for classe, subclasses in tecverde_subclasses.items():

@@ -1,6 +1,9 @@
 /**
  * Funções para salvar formulários da página de categorização
  * Inclui funções individuais e função para salvar tudo em sequência
+ * 
+ * IMPORTANTE: Este arquivo é o único responsável por gerenciar os eventos de salvamento
+ * de avaliações (ratings). Não adicione event handlers duplicados em outros arquivos.
  */
 
 // Função para salvar avaliação da IA (AIA)
