@@ -406,7 +406,7 @@
                     <i class="fas fa-robot"></i>
                 </div>
                 <div class="stat-value">{{ stats.ai_suggested_projects }}</div>
-                <div class="stat-label">Sugestões da IA</div>
+                <div class="stat-label">Classificados por IA</div>
                 <div class="stat-percentage">
                     <i class="fas fa-chart-pie"></i> {{ stats.ai_suggested_percentage }}% do total
                 </div>
@@ -537,11 +537,11 @@
     <div class="col-md-6">
         <div class="card dashboard-card">
             <div class="card-header">
-                <h5><i class="fas fa-calendar-alt"></i> Timeline de Projetos</h5>
+                <h5><i class="fas fa-leaf"></i> Top 10 Classes de Tecnologia Verde</h5>
             </div>
             <div class="card-body">
                 <div class="chart-container">
-                    <canvas id="timelineChart"></canvas>
+                    <canvas id="tecverdeClassesChart"></canvas>
                 </div>
             </div>
         </div>
@@ -551,7 +551,7 @@
 <!-- Avaliações da IA e Top Unidades -->
 <div class="row mb-4">
     <div class="col-md-8">
-        <div class="card dashboard-card">
+        <div class="card dashboard-card h-100">
             <div class="card-header">
                 <h5><i class="fas fa-star"></i> Avaliações da IA</h5>
             </div>
@@ -622,7 +622,7 @@
         </div>
     </div>
     <div class="col-md-4">
-        <div class="card dashboard-card">
+        <div class="card dashboard-card h-100">
             <div class="card-header">
                 <h5><i class="fas fa-building"></i> Top Unidades Embrapii</h5>
             </div>
@@ -858,30 +858,25 @@
             document.getElementById('tecverdeChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
         }
         
-        // Gráfico de Timeline
-        if (chartsData.timeline.labels.length > 0) {
-            const timelineCtx = document.getElementById('timelineChart').getContext('2d');
-            new Chart(timelineCtx, {
-                type: 'line',
+        // Gráfico de Classes de Tecnologia Verde
+        if (chartsData.tecverde_classes && chartsData.tecverde_classes.labels.length > 0) {
+            const tecverdeClassesCtx = document.getElementById('tecverdeClassesChart').getContext('2d');
+            new Chart(tecverdeClassesCtx, {
+                type: 'bar',
                 data: {
-                    labels: chartsData.timeline.labels,
+                    labels: chartsData.tecverde_classes.labels,
                     datasets: [{
-                        label: 'Projetos por Mês',
-                        data: chartsData.timeline.values,
-                        backgroundColor: 'rgba(0, 146, 96, 0.2)',
-                        borderColor: '#009260',
-                        borderWidth: 2,
-                        tension: 0.3,
-                        fill: true,
-                        pointBackgroundColor: '#1A6354',
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 2,
-                        pointRadius: 4
+                        label: 'Projetos por Classe',
+                        data: chartsData.tecverde_classes.values,
+                        backgroundColor: '#28a745',
+                        borderColor: '#1A6354',
+                        borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    indexAxis: 'y',
                     plugins: {
                         legend: {
                             display: false
@@ -889,24 +884,23 @@
                     },
                     scales: {
                         x: {
+                            beginAtZero: true,
                             grid: {
-                                display: false
+                                display: true,
+                                drawBorder: false
                             }
                         },
                         y: {
-                            beginAtZero: true,
                             grid: {
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                precision: 0
+                                display: false,
+                                drawBorder: false
                             }
                         }
                     }
                 }
             });
         } else {
-            document.getElementById('timelineChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
+            document.getElementById('tecverdeClassesChart').parentNode.innerHTML = '<div class="text-center text-muted py-5"><i class="fas fa-info-circle me-1"></i> Sem dados para exibir</div>';
         }
     });
 </script>

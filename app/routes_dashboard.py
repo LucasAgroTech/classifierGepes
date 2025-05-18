@@ -77,8 +77,10 @@ def get_general_stats():
             Projeto.tecverde_se_aplica == None
         )).count()
         
-        # Projetos com sugestão da IA
-        ai_suggested_projects = db.session.query(AISuggestion.id_projeto).distinct().count()
+        # Projetos com sugestão da IA (apenas os que não foram validados por humanos)
+        ai_suggested_projects = db.session.query(AISuggestion.id_projeto).filter(
+            ~AISuggestion.id_projeto.in_(db.session.query(Categoria.id_projeto))
+        ).distinct().count()
         
         # Projetos com classificações adicionais
         additional_classifications = db.session.query(ClassificacaoAdicional.id_projeto).distinct().count()
@@ -155,13 +157,31 @@ def get_charts_data():
         
         # Distribuição por tecnologia verde (classes)
         tecverde_data = db.session.query(
-            Projeto.tecverde_classe,
+            Projeto.tecverde_se_aplica,
             func.count(Projeto.id).label('count')
-        ).filter(Projeto.tecverde_se_aplica == True, Projeto.tecverde_classe != None, Projeto.tecverde_classe != '').group_by(Projeto.tecverde_classe).all()
+        ).filter(Projeto.tecverde_se_aplica.in_([True, False])).group_by(Projeto.tecverde_se_aplica).all()
+        
+        # Mapear True/False para "Sim"/"Não" para melhor visualização
+        tecverde_labels = ["Sim" if t[0] else "Não" for t in tecverde_data]
         
         tecverde = {
-            'labels': [t[0] for t in tecverde_data],
+            'labels': tecverde_labels,
             'values': [t[1] for t in tecverde_data]
+        }
+        
+        # Top 10 classes de tecnologia verde
+        tecverde_classes_data = db.session.query(
+            Projeto.tecverde_classe,
+            func.count(Projeto.id).label('count')
+        ).filter(
+            Projeto.tecverde_se_aplica == True,
+            Projeto.tecverde_classe != None,
+            Projeto.tecverde_classe != ''
+        ).group_by(Projeto.tecverde_classe).order_by(desc('count')).limit(10).all()
+        
+        tecverde_classes = {
+            'labels': [t[0] for t in tecverde_classes_data],
+            'values': [t[1] for t in tecverde_classes_data]
         }
         
         # Timeline de projetos por data de contrato (agrupados por mês)
@@ -190,6 +210,7 @@ def get_charts_data():
             'macroareas': macroareas,
             'segmentos': segmentos,
             'tecverde': tecverde,
+            'tecverde_classes': tecverde_classes,
             'timeline': timeline,
             'status': status
         }
@@ -199,6 +220,7 @@ def get_charts_data():
             'macroareas': {'labels': [], 'values': []},
             'segmentos': {'labels': [], 'values': []},
             'tecverde': {'labels': [], 'values': []},
+            'tecverde_classes': {'labels': [], 'values': []},
             'timeline': {'labels': [], 'values': []},
             'status': {'labels': [], 'values': []}
         }
