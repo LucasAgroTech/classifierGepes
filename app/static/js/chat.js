@@ -13,6 +13,7 @@ class ChatBot {
         this.isTyping = false;
         this.messages = [];
         this.typingTimeout = null;
+        this.userInfo = null;
         
         // Initialize the chat interface
         this.init();
@@ -35,8 +36,104 @@ class ChatBot {
         // Add event listeners
         this.addEventListeners();
         
-        // Add welcome message
-        this.addBotMessage("Olá! Sou o assistente do gepesClassifier. Como posso ajudar você hoje? Posso fornecer informações sobre projetos, categorias, tecnologias verdes e muito mais.");
+        // Fetch user info and then add welcome message
+        this.fetchUserInfo();
+    }
+    
+    /**
+     * Fetch user information from the server
+     */
+    fetchUserInfo() {
+        fetch('/chat/user_info', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': this.getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            this.userInfo = data;
+            this.addWelcomeMessage();
+        })
+        .catch(error => {
+            console.error('Error fetching user info:', error);
+            // Fallback to generic welcome message if we can't get user info
+            this.addWelcomeMessage();
+        });
+    }
+    
+    /**
+     * Add welcome message with user information if available
+     */
+    addWelcomeMessage() {
+        let welcomeMessage = "";
+        
+        if (this.userInfo && this.userInfo.nome) {
+            const stats = this.userInfo.estatisticas || {};
+            const userName = this.userInfo.nome.split(' ')[0]; // Pega apenas o primeiro nome
+            
+            // Construir mensagem com estatísticas
+            welcomeMessage = `Olá, ${userName}! 👋\n\nBem-vindo de volta ao classificador.`;
+            
+            // Adicionar estatísticas se disponíveis
+            if (Object.keys(stats).length > 0) {
+                welcomeMessage += ` Aqui estão alguns dados sobre sua performance:\n\n`;
+                
+                // Estatísticas básicas
+                welcomeMessage += `📊 Classificações: **${stats.total_classificacoes || 0}**  \n`;
+                welcomeMessage += `🔍 Projetos: **${stats.projetos_unicos || 0}**  \n`;
+                
+                // Uso da IA
+                if (stats.projetos_com_ia > 0) {
+                    welcomeMessage += `🤖 Uso da IA: **${stats.projetos_com_ia}** vezes (**${stats.taxa_uso_ia}%**)  \n`;
+                }
+                
+                // Ratings médios
+                if (stats.media_aia > 0 || stats.media_tecverde > 0) {
+                    welcomeMessage += `⭐ AIA: **${stats.media_aia}** \n`;
+                }
+
+                // Ratings médios
+                if (stats.media_aia > 0 || stats.media_tecverde > 0) {
+                    welcomeMessage += `⭐ Tec Verde: **${stats.media_tecverde}**  \n`;
+                }
+                
+                // Última classificação
+                if (stats.ultima_classificacao && stats.ultima_classificacao !== "Nenhuma") {
+                    welcomeMessage += `📅 Última atuação: **${stats.ultima_classificacao}**  \n\n`;
+                }
+                
+                // Segmentos frequentes
+                if (stats.segmentos_frequentes && stats.segmentos_frequentes.length > 0) {
+                    const segmentos = stats.segmentos_frequentes.join(', ');
+                    welcomeMessage += `📌 Segmentos recorrentes: **${segmentos}**  \n\n`;
+                }
+                
+                // Comparação com outros usuários
+                if (stats.percentil > 50) {
+                    welcomeMessage += `Você está entre os **${stats.percentil}%** mais ativos da plataforma. Continue assim!\n`;
+                } else if (stats.total_classificacoes > 0) {
+                    welcomeMessage += `Você já contribuiu com **${stats.total_classificacoes}** classificações. `;
+                    if (stats.media_usuarios > 0) {
+                        welcomeMessage += `A média entre usuários é **${stats.media_usuarios}**.\n`;
+                    }
+                }
+                
+                // Projetos pendentes
+                if (stats.projetos_pendentes > 0) {
+                    welcomeMessage += `Temos **${stats.projetos_pendentes}** projetos aguardando sua análise.`;
+                }
+            } else {
+                // Mensagem simplificada sem estatísticas
+                welcomeMessage += ` Como posso ajudar você hoje? Posso fornecer informações sobre projetos, categorias, tecnologias verdes e muito mais.`;
+            }
+        } else {
+            // Mensagem genérica caso não tenha informações do usuário
+            welcomeMessage = "Olá! Sou o assistente do gepesClassifier. Como posso ajudar você hoje? Posso fornecer informações sobre projetos, categorias, tecnologias verdes e muito mais.";
+        }
+        
+        this.addBotMessage(welcomeMessage);
     }
     
     /**
@@ -51,7 +148,7 @@ class ChatBot {
         const header = document.createElement('div');
         header.className = 'chat-header';
         header.innerHTML = `
-            <h3><i class="fas fa-robot"></i> <span>Assistente gepesClassifier</span></h3>
+            <h3><i class="fas fa-brain"></i> <span>Agente</span></h3>
             <div class="chat-controls">
                 <button class="minimize-chat" title="Minimizar"><i class="fas fa-minus"></i></button>
                 <button class="clear-chat" title="Limpar conversa"><i class="fas fa-trash"></i></button>
@@ -176,7 +273,7 @@ class ChatBot {
         this.messagesContainer.innerHTML = '';
         
         // Add welcome message again
-        this.addBotMessage("Olá! Sou o assistente do gepesClassifier. Como posso ajudar você hoje? Posso fornecer informações sobre projetos, categorias, tecnologias verdes e muito mais.");
+        this.addWelcomeMessage();
         
         // Send clear request to server to reset session
         fetch('/chat/clear', {
@@ -206,6 +303,11 @@ class ChatBot {
         // Show typing indicator
         this.showTypingIndicator();
         
+        // Prepare message data with user info if available
+        const messageData = {
+            message: message
+        };
+        
         // Send message to server
         fetch('/chat/message', {
             method: 'POST',
@@ -213,7 +315,7 @@ class ChatBot {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': this.getCSRFToken()
             },
-            body: JSON.stringify({ message })
+            body: JSON.stringify(messageData)
         })
         .then(response => response.json())
         .then(data => {

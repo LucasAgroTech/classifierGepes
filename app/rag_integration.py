@@ -176,13 +176,14 @@ class RAGAssistant:
         Quando não souber a resposta, admita isso claramente e sugira como o usuário pode obter a informação.
         """
     
-    def get_response(self, user_message, conversation_history=None):
+    def get_response(self, user_message, conversation_history=None, user_info=None):
         """
         Get a response from the RAG assistant
         
         Args:
             user_message (str): The user's message
             conversation_history (list): Previous messages in the conversation
+            user_info (dict): Information about the current user
             
         Returns:
             str: The assistant's response
@@ -214,9 +215,21 @@ class RAGAssistant:
         # Retrieve relevant information from the database based on the user's query
         context = self._retrieve_enhanced_context(user_message, query_analysis)
         
+        # Add user information to the system prompt if available
+        system_content = self.system_prompt
+        if user_info:
+            user_context = f"""
+            INFORMAÇÕES DO USUÁRIO:
+            Nome: {user_info.get('nome', 'Usuário')}
+            Email: {user_info.get('email', 'Não disponível')}
+            
+            Por favor, sempre se dirija ao usuário pelo nome quando apropriado.
+            """
+            system_content = system_content + "\n\n" + user_context
+        
         # Prepare messages for the API call
         messages = [
-            {"role": "system", "content": self.system_prompt + "\n\n" + context}
+            {"role": "system", "content": system_content + "\n\n" + context}
         ]
         
         # Add relevant conversation history (limitado a 5 mensagens para economia de tokens)

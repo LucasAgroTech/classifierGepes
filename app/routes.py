@@ -8,6 +8,7 @@ import json
 import os
 from datetime import datetime
 import logging
+from sqlalchemy import func, distinct
 
 main = Blueprint('main', __name__)
 
@@ -1123,6 +1124,196 @@ def view_logs():
         flash(f'Erro ao carregar logs: {str(e)}', 'error')
         logger.error(f"Erro ao carregar logs: {str(e)}")
         return redirect(url_for('main.projects'))
+
+# Rota para obter informações do usuário para o chat
+@main.route('/chat/user_info', methods=['GET'])
+@login_required
+def get_chat_user_info():
+    try:
+        # Informações básicas do usuário
+        user_info = {
+            'id': current_user.id,
+            'nome': current_user.nome,
+            'email': current_user.email,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # 1. Total de classificações realizadas pelo usuário
+        total_classificacoes = Log.query.filter_by(id_usuario=current_user.id).count()
+        
+        # Separar por tipo (aproximação baseada nos dados disponíveis)
+        logs_com_ai_aia = Log.query.filter(
+            Log.id_usuario == current_user.id,
+            Log.ai_rating_aia.isnot(None)
+        ).count()
+        
+        logs_com_tecverde = Log.query.filter(
+            Log.id_usuario == current_user.id,
+            Log.ai_rating_tecverde.isnot(None)
+        ).count()
+        
+        # 2. Projetos únicos classificados
+        projetos_unicos = db.session.query(func.count(distinct(Log.id_projeto)))\
+            .filter_by(id_usuario=current_user.id).scalar()
+        
+        # 3. Projetos com uso da IA
+        projetos_com_ia = Log.query.filter_by(
+            id_usuario=current_user.id, 
+            utilizou_ia=True
+        ).count()
+        
+        # Taxa de uso da IA (%)
+        taxa_uso_ia = round((projetos_com_ia / total_classificacoes) * 100, 1) if total_classificacoes > 0 else 0
+        
+        # 4. Nota média de rating dada pelo usuário
+        media_aia = db.session.query(func.avg(AIRating.rating))\
+            .filter_by(user_id=current_user.email, tipo='aia').scalar()
+        
+        media_tecverde = db.session.query(func.avg(AIRating.rating))\
+            .filter_by(user_id=current_user.email, tipo='tecverde').scalar()
+        
+        # 5. Último acesso ou última classificação
+        ultima_classificacao = Log.query.filter_by(id_usuario=current_user.id)\
+            .order_by(Log.data_acao.desc()).first()
+        
+        ultima_data = ultima_classificacao.data_acao if ultima_classificacao else None
+        ultima_data_formatada = ultima_data.strftime('%d/%m/%Y') if ultima_data else "Nenhuma"
+        
+        # 6. Áreas mais classificadas (top 3 segmentos)
+        # Subquery para buscar o segmento dos projetos associados aos logs
+        segmentos_frequentes = db.session.query(
+            Categoria.segmento, 
+            func.count().label('total')
+        ).join(
+            Log, 
+            Log.id_projeto == Categoria.id_projeto
+        ).filter(
+            Log.id_usuario == current_user.id,
+            Categoria.segmento.isnot(None)
+        ).group_by(
+            Categoria.segmento
+        ).order_by(
+            func.count().desc()
+        ).limit(3).all()
+        
+        # 8. Sugestão de projetos pendentes (não classificados ainda)
+        projetos_pendentes = db.session.query(func.count(Projeto.id))\
+            .outerjoin(Categoria)\
+            .filter(Categoria.id_projeto == None)\
+            .scalar()
+        
+        # Comparação com média de outros usuários
+        # Calcular a média de classificações por usuário em duas etapas
+        # 1. Consulta para obter a contagem de logs por usuário
+        contagem_por_usuario = db.session.query(
+            Log.id_usuario,
+            func.count(Log.id).label('total')
+        ).filter(
+            Log.id_usuario.isnot(None)
+        ).group_by(
+            Log.id_usuario
+        ).all()
+        
+        # 2. Calcular a média em Python (em vez de aninhar funções de agregação no SQL)
+        total_usuarios = len(contagem_por_usuario)
+        if total_usuarios > 0:
+            soma_classificacoes = sum(count for _, count in contagem_por_usuario)
+            media_classificacoes_usuarios = soma_classificacoes / total_usuarios
+        else:
+            media_classificacoes_usuarios = 0
+        
+        # Contar quantos usuários têm menos classificações que o usuário atual
+        usuarios_abaixo = sum(1 for _, count in contagem_por_usuario if count < total_classificacoes)
+            
+        # Calcular percentil (quanto maior, melhor)
+        percentil = round((usuarios_abaixo / max(1, total_usuarios)) * 100) if total_usuarios > 0 else 0
+        
+        # Adicionar estatísticas ao objeto user_info
+        user_info.update({
+            'estatisticas': {
+                'total_classificacoes': total_classificacoes,
+                'classificacoes_aia': logs_com_ai_aia,
+                'classificacoes_tecverde': logs_com_tecverde,
+                'projetos_unicos': projetos_unicos or 0,
+                'projetos_com_ia': projetos_com_ia,
+                'taxa_uso_ia': taxa_uso_ia,
+                'media_aia': round(media_aia, 1) if media_aia else 0,
+                'media_tecverde': round(media_tecverde, 1) if media_tecverde else 0,
+                'ultima_classificacao': ultima_data_formatada,
+                'segmentos_frequentes': [s[0] for s in segmentos_frequentes],
+                'projetos_pendentes': projetos_pendentes or 0,
+                'media_usuarios': round(media_classificacoes_usuarios, 1) if media_classificacoes_usuarios else 0,
+                'percentil': percentil
+            }
+        })
+        
+        return jsonify(user_info)
+    except Exception as e:
+        logger.error(f"Erro ao obter informações do usuário: {str(e)}")
+        return jsonify({
+            'id': current_user.id,
+            'nome': current_user.nome,
+            'email': current_user.email,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+
+# Rota para processar mensagem do chat
+@main.route('/chat/message', methods=['POST'])
+@login_required
+def process_chat_message():
+    try:
+        data = request.json
+        if not data or 'message' not in data:
+            return jsonify({'error': 'Mensagem não fornecida'}), 400
+            
+        user_message = data['message']
+        
+        # Importar após garantir que a aplicação está inicializada
+        from app.rag_integration import rag_assistant
+        
+        # Criar histórico de conversa a partir da sessão ou iniciar um novo
+        conversation_history = session.get('chat_history', [])
+        
+        # Adicionar a mensagem do usuário ao histórico
+        conversation_history.append({"role": "user", "content": user_message})
+        
+        # Obter informações do usuário para o contexto
+        user_info = {
+            'id': current_user.id,
+            'nome': current_user.nome,
+            'email': current_user.email,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+        
+        # Obter resposta do assistente RAG com o contexto do usuário
+        response = rag_assistant.get_response(user_message, conversation_history, user_info)
+        
+        # Adicionar a resposta do assistente ao histórico
+        conversation_history.append({"role": "assistant", "content": response})
+        
+        # Limitar o histórico a 10 mensagens para economia de tokens
+        if len(conversation_history) > 10:
+            conversation_history = conversation_history[-10:]
+            
+        # Salvar o histórico atualizado na sessão
+        session['chat_history'] = conversation_history
+        
+        return jsonify({'response': response})
+    except Exception as e:
+        logger.error(f"Erro ao processar mensagem do chat: {str(e)}")
+        return jsonify({'error': 'Erro ao processar mensagem'}), 500
+
+# Rota para limpar o histórico do chat
+@main.route('/chat/clear', methods=['POST'])
+@login_required
+def clear_chat():
+    try:
+        # Limpar o histórico de conversa da sessão
+        session.pop('chat_history', None)
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Erro ao limpar histórico do chat: {str(e)}")
+        return jsonify({'error': 'Erro ao limpar histórico'}), 500
 
 # Rota para ir para o próximo projeto
 @main.route('/next_project/<current_project_id>')
