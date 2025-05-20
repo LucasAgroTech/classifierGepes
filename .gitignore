@@ -38,6 +38,3 @@ logs/
 
 # Heroku
 .env.prod
-
-scripts_public/
-migrations/

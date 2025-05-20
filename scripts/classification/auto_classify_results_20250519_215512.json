@@ -1,0 +1,1108 @@
+{
+  "total": 100,
+  "success": 100,
+  "error": 0,
+  "skipped": 0,
+  "results": [
+    {
+      "project_id": 111,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Simulação e Prototipação Imersiva",
+        "dominio": "Gêmeos digitais para produtos e processos; Simulações imersivas para validação de projetos",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 112,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Construção",
+        "segmento": "Obras de Infraestrutura",
+        "dominio": "Infraestruturas inteligentes; Monitoramento estrutural; Tecnologias para grandes obras civis",
+        "dominio_outro": "Automação predial e IoT em edifícios; Equipamentos e automação no canteiro",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 113,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Higiene Pessoal e Saúde preventiva",
+        "dominio": "Tecnologias voltadas à profilaxia e controle de infecções",
+        "dominio_outro": "Inteligência epidemiológica, vigilância e predição de surtos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 114,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Alimentos e Bebidas",
+        "dominio": "Processamento de alimentos e bebidas; Alternativas proteicas e/ou alimentos funcionais",
+        "dominio_outro": "Gestão e Manejo da produção agrícola",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 115,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Planejamento de processos produtivos; Plataforma de gestão da produção; Otimização de linhas de montagem e processos industriais; Aplicação de tecnologias digitais para aumento de eficiência",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 116,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Produtos Farmacêuticos e Insumos Estratégicos",
+        "dominio": "Desenvolvimento de medicamentos; Biotecnologia e terapias celulares",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 117,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Energia renovável",
+        "segmento": "Biomossa (biodiesel) e biogás",
+        "dominio": "Cogeração de energia com biomassa; Tecnologias para biomassa lignocelulósica",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 118,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Agricultura de precisão e automação agrícola; Gestão e Manejo da produção agrícola",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 119,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Petróleo e gás",
+        "segmento": "Exploração e produção de petróleo",
+        "dominio": "Integração de dados para otimização da produção",
+        "dominio_outro": "Digitalização e automação de processos de refino",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 120,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Dispositivos Médicos e Biomateriais",
+        "dominio": "Dispositivos vestíveis",
+        "dominio_outro": "Telemedicina; Integração de inteligência artificial em fluxos assistenciais; Monitoramento de condições crônicas e promoção do autocuidado",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 121,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Assistência à Saúde",
+        "dominio": "Aplicativos de suporte ao cuidado e autogestão da saúde; Integração de inteligência artificial em fluxos assistenciais",
+        "dominio_outro": "Sistemas de informação em saúde e interoperabilidade de dados; Monitoramento de condições crônicas e promoção do autocuidado",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 122,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Controle de produção em tempo real; Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Controle estatístico da qualidade; Rastreabilidade de produtos e processos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 123,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Pessoas e Capacitação",
+        "dominio": "Capacitação digital e treinamento técnico; Plataformas para aprendizagem corporativa (e-learning, simulações)",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão; Plataformas de gestão e produtividade para ambientes híbridos/remotos",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 124,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Reabilitação e Fisioterapia Avançada",
+        "dominio": "Tecnologias assistivas e exoesqueletos; Sistemas de monitoramento remoto de reabilitação",
+        "dominio_outro": "Telemedicina; Aplicativos de suporte ao cuidado e autogestão da saúde; Monitoramento de condições crônicas e promoção do autocuidado",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 125,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Gestão de Resíduos Sólidos Urbanos",
+        "dominio": "Digitalização e rastreabilidade de resíduos; Sistemas inteligentes de coleta e roteirização de resíduos urbanos",
+        "dominio_outro": "Monitoramento e automação de redes de abastecimento e coleta",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 126,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria de móveis e madeira",
+        "dominio": "Otimização do uso de madeira e derivados; Reaproveitamento de resíduos madeireiros",
+        "dominio_outro": "Sustentabilidade no ciclo de vida do produto; Novas fibras e bioprodutos a partir de celulose; Reaproveitamento de resíduos lignocelulósicos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 127,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "E-commerce e Experiências Digitais",
+        "dominio": "Personalização de ofertas e recomendação de produtos",
+        "dominio_outro": "Automação de atendimento e chatbots com IA; Plataformas web com entrega de software como serviço (SaaS)",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 128,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "E-commerce e Experiências Digitais",
+        "dominio": "Plataformas de e-commerce B2C e B2B; Personalização de ofertas e recomendação de produtos; Soluções de pagamento",
+        "dominio_outro": "Plataformas web com entrega de software como serviço (SaaS); Desenvolvimento de APIs e interfaces para integração de serviços",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 129,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Controle de produção em tempo real; Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Controle estatístico da qualidade; Indicadores de desempenho e gestão da não conformidade",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 130,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Pessoas e Capacitação",
+        "dominio": "Ferramentas de RH baseadas em dados; Plataformas para aprendizagem corporativa (e-learning, simulações)",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Sistemas internos para automação de processos corporativos (jurídico, RH, TI, compras, etc.)",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 131,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Assistência à Saúde",
+        "dominio": "Integração de inteligência artificial em fluxos assistenciais",
+        "dominio_outro": "Equipamentos de diagnóstico; Sistemas de informação em saúde e interoperabilidade de dados",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 132,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Fertilizantes e nutrição vegetal",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 133,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Veículos elétricos e híbridos",
+        "dominio_outro": "Eficiência energética e miniaturização de dispositivos; Reutilização e reciclagem de componentes eletrônicos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 134,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Veículos elétricos e híbridos",
+        "dominio_outro": "Eficiência energética em bens de consumo; Desenvolvimento de placas eletrônicas e sensores; Eficiência energética e miniaturização de dispositivos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 135,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Sustentabilidade na Produção",
+        "dominio": "Reaproveitamento de resíduos industriais; Economia circular na indústria",
+        "dominio_outro": "Otimização de linhas de montagem e processos industriais; Controle estatístico da qualidade",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 136,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Otimização de linhas de montagem e processos industriais; Aplicação de tecnologias digitais para aumento de eficiência",
+        "dominio_outro": "Eficiência no uso de energia e insumos; Redução de emissões e pegada de carbono; Tecnologias limpas para manufatura",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 137,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria eletroeletrônica",
+        "dominio": "Desenvolvimento de placas eletrônicas e sensores; Eficiência energética e miniaturização de dispositivos",
+        "dominio_outro": "Veículos elétricos e híbridos; Sustentabilidade no ciclo de vida do produto",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 138,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Controle químico de pragas; Agricultura de precisão e automação agrícola",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 139,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "E-commerce e Experiências Digitais",
+        "dominio": "Personalização de ofertas e recomendação de produtos",
+        "dominio_outro": "Plataformas web com entrega de software como serviço (SaaS); Desenvolvimento de APIs e interfaces para integração de serviços",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 140,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Redes Elétricas",
+        "dominio": "Medição inteligente e redes de energia digitalizadas (smart grids); Tecnologias para redução de perdas técnicas e comerciais",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 141,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Otimização de linhas de montagem e processos industriais",
+        "dominio_outro": "Eficiência no uso de energia e insumos; Redução de emissões e pegada de carbono",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 142,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Indicadores de desempenho e gestão da não conformidade",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 143,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "SaaS e Microserviços",
+        "dominio": "Plataformas web com entrega de software como serviço (SaaS); Soluções digitais para automatização de processos técnicos ou administrativos; Desenvolvimento de APIs e interfaces para integração de serviços",
+        "dominio_outro": "Soluções de pagamento",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 144,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "SaaS e Microserviços",
+        "dominio": "Plataformas web com entrega de software como serviço (SaaS); Soluções digitais para automatização de processos técnicos ou administrativos",
+        "dominio_outro": "Automação de atendimento e chatbots com IA",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 145,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Gestão de frotas e monitoramento de veículos; Otimização de rotas e distribuição",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão; Eficiência no uso de energia e insumos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 146,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Alimentos e Bebidas",
+        "dominio": "Processamento de alimentos e bebidas; Segurança e conservação alimentar",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 147,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Fertilizantes e nutrição vegetal",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 148,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria siderúrgica e metalúrgica",
+        "dominio": "Fundição e conformação de metais; Novas ligas metálicas com propriedades especiais",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 149,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Redes 5G e futuras gerações (6G); Conectividade móvel; Infraestrutura de fibra óptica",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 150,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Controle de produção em tempo real; Otimização de linhas de montagem e processos industriais; Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos; Integração entre sensores físicos e ambientes simulados",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 151,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Processos Administrativos",
+        "dominio": "Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Capacitação digital e treinamento técnico",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 152,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Otimização de linhas de montagem e processos industriais; Aplicação de tecnologias digitais para aumento de eficiência",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Produtividade da força de trabalho; Capacitação digital e treinamento técnico; Robótica e automação logística",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 153,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Qualidade, Riscos e Conformidade",
+        "dominio": "Monitoramento de riscos operacionais",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 154,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Equipamentos de rede (roteadores, switches, modems industriais)",
+        "dominio_outro": "Antenas e terminais de recepção e transmissão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 155,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Rastreabilidade de cargas; Gestão de frotas e monitoramento de veículos",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 156,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Processos Administrativos",
+        "dominio": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 157,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Processos Administrativos",
+        "dominio": "Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos; Sistemas internos para automação de processos corporativos (jurídico, RH, TI, compras, etc.)",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 158,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Petróleo e gás",
+        "segmento": "Exploração e produção de petróleo",
+        "dominio": "Injeção e recuperação avançada de petróleo (EOR); Integração de dados para otimização da produção",
+        "dominio_outro": "Armazenamento subterrâneo e segurança operacional; Tecnologias de descarbonização e redução de emissões",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 159,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Pessoas e Capacitação",
+        "dominio": "Plataformas para aprendizagem corporativa (e-learning, simulações); Ferramentas de RH baseadas em dados",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Plataformas de gestão e produtividade para ambientes híbridos/remotos; Ferramentas digitais para colaboração e co-criação (whiteboards, hubs)",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 160,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Dispositivos Médicos e Biomateriais",
+        "dominio": "Engenharia de tecidos",
+        "dominio_outro": "Produtos inovadores de higiene e cuidados pessoais (absorventes, antissépticos, etc.); Tecnologias voltadas à profilaxia e controle de infecções",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 161,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Defesa e aeroespacial",
+        "segmento": "Aeronáutica",
+        "dominio": "Projeto e fabricação de aeronaves; Sistemas embarcados e aviônicos",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 162,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Qualidade, Riscos e Conformidade",
+        "dominio": "Certificações industriais e normas ISO; Conformidade regulatória e boas práticas de fabricação",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 163,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Redes 5G e futuras gerações (6G); Conectividade móvel; Equipamentos de rede (roteadores, switches, modems industriais)",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 164,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Processos Administrativos",
+        "dominio": "Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos",
+        "dominio_outro": "Certificações industriais e normas ISO; Sistemas de auditoria digital; Conformidade regulatória e boas práticas de fabricação",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 165,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Fertilizantes e nutrição vegetal; Melhoramento genético vegetal; Gestão e Manejo da produção agrícola",
+        "dominio_outro": "Processamento de alimentos e bebidas",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 166,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Conectividade veicular (V2X)",
+        "dominio_outro": "Desenvolvimento de placas eletrônicas e sensores; Eletrônicos embarcados para equipamentos industriais",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 167,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria eletroeletrônica",
+        "dominio": "Desenvolvimento de placas eletrônicas e sensores; Otimização de circuitos integrados e semicondutores",
+        "dominio_outro": "Conectividade veicular (V2X); Impressão funcional e rastreabilidade por QR ou RFID",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 168,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria siderúrgica e metalúrgica",
+        "dominio": "Reciclagem de sucata metálica; Tecnologias de redução de emissões na produção de aço",
+        "dominio_outro": "Reciclagem química de resíduos plásticos; Reaproveitamento de rejeitos e resíduos de mineração",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 169,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Relações B2B/B2C",
+        "segmento": "E-commerce e Experiências Digitais",
+        "dominio": "Plataformas de e-commerce B2C e B2B; Personalização de ofertas e recomendação de produtos",
+        "dominio_outro": "Plataformas web com entrega de software como serviço (SaaS); Desenvolvimento de APIs e interfaces para integração de serviços",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 170,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Gestão e Inteligência em Saúde Pública",
+        "dominio": "Sistemas de informação em saúde e interoperabilidade de dados",
+        "dominio_outro": "Telemedicina; Aplicativos de suporte ao cuidado e autogestão da saúde; Integração de inteligência artificial em fluxos assistenciais",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 171,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Gestão de frotas e monitoramento de veículos; Otimização de rotas e distribuição",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 172,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Produtos Farmacêuticos e Insumos Estratégicos",
+        "dominio": "Biotecnologia e terapias celulares; Produção de vacinas e biofármacos; Bioinformática",
+        "dominio_outro": "Inteligência epidemiológica, vigilância e predição de surtos; Tecnologias voltadas à profilaxia e controle de infecções",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 173,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Otimização de linhas de montagem e processos industriais; Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Robótica e automação logística; Gêmeos digitais para produtos e processos",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 174,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Gêmeos digitais para produtos e processos",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 175,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria química",
+        "dominio": "Desenvolvimento de novos polímeros e compósitos; Processos sustentáveis para síntese química; Substituição de solventes tóxicos por alternativas verdes",
+        "dominio_outro": "Tratamento térmico e de superfícies; Tecnologias de redução de emissões na produção de aço",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 176,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Eficiência energética em motores de combustão",
+        "dominio_outro": "Desenvolvimento de placas eletrônicas e sensores; Eficiência energética e miniaturização de dispositivos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 177,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Sistemas de direção autônoma; Conectividade veicular (V2X)",
+        "dominio_outro": "Desenvolvimento de placas eletrônicas e sensores; Eletrônicos embarcados para equipamentos industriais",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 178,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Processos Administrativos",
+        "dominio": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Soluções digitais para elaboração, gestão e monitoramento de projetos e contratos",
+        "dominio_outro": "Ferramentas de RH baseadas em dados; Gestão colaborativa e cultura organizacional",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 179,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Redes Elétricas",
+        "dominio": "Medição inteligente e redes de energia digitalizadas (smart grids); Eficiência energética em sistemas de distribuição; Monitoramento de redes elétricas urbanas e industriais",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 180,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Assistência à Saúde",
+        "dominio": "Tecnologias para reabilitação física, cognitiva e cuidados contínuos",
+        "dominio_outro": "Robótica e automação em saúde; Tecnologias assistivas e exoesqueletos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 181,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Energia renovável",
+        "segmento": "Energia solar fotovoltaica",
+        "dominio": "Inversores e sistemas de controle; Integração com edificações e infraestrutura urbana",
+        "dominio_outro": "Integração com redes elétricas; Armazenamento complementar; Integração com outras fontes renováveis",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 182,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria têxtil e de vestuário",
+        "dominio": "Reaproveitamento de resíduos têxteis",
+        "dominio_outro": "Materiais leves e de alta resistência para automóveis; Eficiência energética em motores de combustão; Sustentabilidade no ciclo de vida do produto; Catálise avançada e química de materiais",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 183,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Redes 5G e futuras gerações (6G); Conectividade móvel",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 184,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão da Produção e Operações",
+        "dominio": "Controle de produção em tempo real; Aplicação de tecnologias digitais para aumento de eficiência; Integração de sistemas de gestão da produção",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Eficiência no uso de energia e insumos; Tecnologias limpas para manufatura",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 185,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Dispositivos Médicos e Biomateriais",
+        "dominio": "Dispositivos vestíveis",
+        "dominio_outro": "Telemedicina; Monitoramento de condições crônicas e promoção do autocuidado",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 186,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Água e Esgoto",
+        "dominio": "Captação, tratamento e distribuição de água; Monitoramento e automação de redes de abastecimento e coleta; Tecnologias para saneamento descentralizado",
+        "dominio_outro": "Eficiência energética em sistemas de distribuição",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 187,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Gestão de frotas e monitoramento de veículos; Otimização de rotas e distribuição",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 188,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Controle biológico de pragas",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 189,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria automobilística",
+        "dominio": "Materiais leves e de alta resistência para automóveis",
+        "dominio_outro": "Desenvolvimento de novos polímeros e compósitos; Eficiência energética e miniaturização de dispositivos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 190,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Gestão de Pessoas e Capacitação",
+        "dominio": "Capacitação digital e treinamento técnico; Plataformas para aprendizagem corporativa (e-learning, simulações)",
+        "dominio_outro": "Plataformas de gestão e produtividade para ambientes híbridos/remotos; Ferramentas digitais para colaboração e co-criação (whiteboards, hubs)",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 191,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Estações de transmissão; Equipamentos de rede (roteadores, switches, modems industriais)",
+        "dominio_outro": "Antenas e terminais de recepção e transmissão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 192,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Redes 5G e futuras gerações (6G); Conectividade móvel",
+        "dominio_outro": "Antenas e terminais de recepção e transmissão",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 193,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Melhoramento genético vegetal",
+        "dominio_outro": "Processamento de alimentos e bebidas; Alternativas proteicas e/ou alimentos funcionais",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 194,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria de papel e celulose",
+        "dominio": "Novas fibras e bioprodutos a partir de celulose; Otimização de processos de branqueamento; Reaproveitamento de resíduos lignocelulósicos",
+        "dominio_outro": "Sustentabilidade no ciclo de vida do produto; Embalagens biodegradáveis e compostáveis; Otimização do uso de madeira e derivados; Reaproveitamento de resíduos madeireiros",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 195,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Produtos Farmacêuticos e Insumos Estratégicos",
+        "dominio": "Desenvolvimento de medicamentos",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 196,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Energia renovável",
+        "segmento": "Biomossa (biodiesel) e biogás",
+        "dominio": "Produção de biodiesel; Aproveitamento de resíduos orgânicos; Tecnologias para biomassa lignocelulósica",
+        "dominio_outro": "Produção a partir de biomassa ou efluentes industriais",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 197,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Alimentos e Bebidas",
+        "dominio": "Processamento de alimentos e bebidas",
+        "dominio_outro": "Máquinas e equipamentos para armazenamento de grãos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 198,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Agro e Alimentos",
+        "segmento": "Agricultura",
+        "dominio": "Melhoramento genético vegetal; Gestão e Manejo da produção agrícola",
+        "dominio_outro": "Processamento de alimentos e bebidas",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 199,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Saúde",
+        "segmento": "Produtos Farmacêuticos e Insumos Estratégicos",
+        "dominio": "Desenvolvimento de medicamentos",
+        "dominio_outro": "Inteligência epidemiológica, vigilância e predição de surtos; Tecnologias voltadas à profilaxia e controle de infecções",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 200,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria química",
+        "dominio": "Desenvolvimento de novos polímeros e compósitos",
+        "dominio_outro": "Materiais leves e de alta resistência para automóveis; Têxteis técnicos e funcionais (ex: antichamas, antibacterianos)",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 201,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Redes de Comunicação Terrestre",
+        "dominio": "Infraestrutura de fibra óptica",
+        "dominio_outro": "N/A",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 202,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Qualidade, Riscos e Conformidade",
+        "dominio": "Controle estatístico da qualidade; Certificações industriais e normas ISO; Conformidade regulatória e boas práticas de fabricação",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Gêmeos digitais para produtos e processos",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 203,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Simulação e Prototipação Imersiva",
+        "dominio": "Simulações imersivas para validação de projetos; Integração entre sensores físicos e ambientes simulados",
+        "dominio_outro": "Soluções digitais para análise de dados internos e apoio à tomada de decisão; Otimização de rotas e distribuição",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 204,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Rastreabilidade de cargas; Gestão de frotas e monitoramento de veículos",
+        "dominio_outro": "Rastreabilidade de produtos e processos; Monitoramento de riscos operacionais",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 205,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Telecomunicações",
+        "segmento": "Comunicação por Satélite",
+        "dominio": "Satélites geoestacionários e de órbita baixa (LEO); Antenas e terminais de recepção e transmissão",
+        "dominio_outro": "Conectividade móvel; Equipamentos de rede (roteadores, switches, modems industriais)",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 206,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Serviços Industriais de Utilidade Pública",
+        "segmento": "Água e Esgoto",
+        "dominio": "Monitoramento e automação de redes de abastecimento e coleta",
+        "dominio_outro": "Cibersegurança e controle em redes de energia",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 207,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria eletroeletrônica",
+        "dominio": "Desenvolvimento de placas eletrônicas e sensores; Eletrônicos embarcados para equipamentos industriais",
+        "dominio_outro": "Impressão funcional e rastreabilidade por QR ou RFID",
+        "tecverde_se_aplica": false
+      }
+    },
+    {
+      "project_id": 208,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Indústria de base e transformação",
+        "segmento": "Indústria siderúrgica e metalúrgica",
+        "dominio": "Tratamento térmico e de superfícies; Novas ligas metálicas com propriedades especiais",
+        "dominio_outro": "Eficiência energética em motores de combustão; Desenvolvimento de novos polímeros e compósitos",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 209,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Gestão de frotas e monitoramento de veículos; Otimização de rotas e distribuição",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Soluções digitais para análise de dados internos e apoio à tomada de decisão",
+        "tecverde_se_aplica": true
+      }
+    },
+    {
+      "project_id": 210,
+      "status": "success",
+      "suggestion": {
+        "microarea": "Engenharia de Produção",
+        "segmento": "Logística e Cadeias de Suprimento",
+        "dominio": "Gestão de frotas e monitoramento de veículos; Rastreabilidade de cargas",
+        "dominio_outro": "Aplicação de tecnologias digitais para aumento de eficiência; Integração entre sensores físicos e ambientes simulados",
+        "tecverde_se_aplica": false
+      }
+    }
+  ]
+}

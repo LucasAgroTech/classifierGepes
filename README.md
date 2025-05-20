@@ -50,10 +50,10 @@ WEB_CONCURRENCY=1
 
 ### 4. Configurar o Banco de Dados
 
-Você pode configurar o banco de dados usando o script `setup_database.py`:
+Você pode configurar o banco de dados usando o script `scripts_public/setup_database.py`:
 
 ```bash
-python setup_database.py
+python scripts_public/setup_database.py
 ```
 
 Este script oferece as seguintes opções:
@@ -99,39 +99,45 @@ A aplicação será executada em `http://localhost:5001`.
   - `ai_integration.py`: Integração com a API OpenAI
   - `static/`: Arquivos estáticos (CSS, JS, imagens)
   - `templates/`: Templates HTML
+- `scripts/`: Scripts organizados por funcionalidade
+  - `classification/`: Scripts de classificação de projetos
+  - `category_management/`: Scripts de gerenciamento de categorias
+  - `tecverde/`: Scripts relacionados a TecVerde
+  - `database/`: Scripts de operações de banco de dados
+  - `tests/`: Scripts de teste
+- `scripts_public/`: Scripts públicos e utilitários
 - `config.py`: Configurações da aplicação
 - `run.py`: Script para executar a aplicação
 - `requirements.txt`: Dependências do projeto
 - `Procfile`: Configuração para deploy no Heroku
-- `create_tables.py`: Script para criar esquema e tabelas
-- `create_admin_user.py`: Script para criar usuário administrador
-- `setup_database.py`: Script para configuração completa do banco de dados
 
 ## Scripts de Configuração
 
-### create_tables.py
-
-Este script cria o esquema `gepes` e todas as tabelas definidas nos modelos. Pode ser executado diretamente:
-
-```bash
-python create_tables.py
-```
-
-### create_admin_user.py
+### scripts/database/create_admin_user.py
 
 Este script cria um usuário administrador no banco de dados. Pode ser executado diretamente:
 
 ```bash
-python create_admin_user.py
+python scripts/database/create_admin_user.py
 ```
 
-### setup_database.py
+### scripts_public/setup_database.py
 
-Este script combina as funcionalidades dos dois scripts anteriores, oferecendo um menu interativo para configuração do banco de dados:
+Este script oferece um menu interativo para configuração do banco de dados:
 
 ```bash
-python setup_database.py
+python scripts_public/setup_database.py
 ```
+
+### scripts_public/create_tables.py
+
+Este script cria o esquema `gepes` e todas as tabelas definidas nos modelos. Pode ser executado diretamente:
+
+```bash
+python scripts_public/create_tables.py
+```
+
+Para mais informações sobre os scripts disponíveis, consulte o [README dos Scripts](scripts/README.md).
 
 ## Funcionalidades
 
@@ -149,4 +155,4 @@ python setup_database.py
 
 2. **Banco de Dados**: O aplicativo espera um banco de dados PostgreSQL com um schema chamado 'gepes'. Os scripts de configuração criam este esquema automaticamente.
 
-3. **Usuários**: Use o script `create_admin_user.py` ou a opção correspondente no `setup_database.py` para criar o primeiro usuário administrador.
+3. **Usuários**: Use o script `scripts/database/create_admin_user.py` ou a opção correspondente no `scripts_public/setup_database.py` para criar o primeiro usuário administrador.

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Tecnologia Verde</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .bg-light {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="mb-4">Teste de Tecnologias Verdes</h2>
+        
+        <div class="row g-4">
+            <!-- Campo para indicar se a tecnologia verde se aplica -->
+            <div class="col-md-12">
+                <div class="form-floating">
+                    <select class="form-select" id="tecverde_se_aplica" name="tecverde_se_aplica">
+                        <option value="">Selecione...</option>
+                        <option value="1">Sim</option>
+                        <option value="0">Não</option>
+                    </select>
+                    <label for="tecverde_se_aplica">Tecnologia Verde se aplica?</label>
+                </div>
+                <div class="form-text text-muted mb-3">
+                    <i class="fas fa-info-circle me-1 mt-2"></i> Indique se o projeto utiliza ou desenvolve Tecnologias Verdes.
+                </div>
+            </div>
+            
+            <!-- Primeira linha: Classe e Subclasse -->
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select class="form-select" id="tecverde_classe" name="tecverde_classe" disabled>
+                        <option value="">Selecione...</option>
+                        <option value="Classe 1">Classe 1</option>
+                        <option value="Classe 2">Classe 2</option>
+                    </select>
+                    <label for="tecverde_classe">Classe</label>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="form-floating">
+                    <select class="form-select" id="tecverde_subclasse" name="tecverde_subclasse" disabled>
+                        <option value="">Selecione...</option>
+                        <option value="Subclasse 1">Subclasse 1</option>
+                        <option value="Subclasse 2">Subclasse 2</option>
+                    </select>
+                    <label for="tecverde_subclasse">Subclasse</label>
+                </div>
+            </div>
+            
+            <!-- Campo de Observações -->
+            <div class="col-md-12 mt-4">
+                <label for="tecverde_observacoes" class="form-label">
+                    Observações
+                </label>
+                <textarea class="form-control" id="tecverde_observacoes" name="tecverde_observacoes" rows="4" placeholder="Adicione observações relevantes..."></textarea>
+            </div>
+        </div>
+        
+        <div class="mt-4">
+            <h4>Status dos Campos</h4>
+            <div id="status" class="alert alert-info">
+                Aguardando seleção...
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Função para verificar se tecnologia verde se aplica e atualizar os campos
+            function verificarTecverdeSePlica() {
+                var seAplica = $('#tecverde_se_aplica').val();
+                var seAplicaText = $('#tecverde_se_aplica option:selected').text();
+                var selectedIndex = document.getElementById('tecverde_se_aplica').selectedIndex;
+                
+                // Atualizar o status para depuração
+                $('#status').html(`
+                    <strong>Valor:</strong> ${seAplica}<br>
+                    <strong>Texto:</strong> ${seAplicaText}<br>
+                    <strong>Índice:</strong> ${selectedIndex}<br>
+                `);
+                
+                console.log("Verificando condições para:", {
+                    valor: seAplica,
+                    texto: seAplicaText,
+                    indice: selectedIndex
+                });
+                
+                // Verificar se é "Sim" pelo valor ou pelo texto ou pelo índice
+                if (seAplica === "1" || seAplicaText === "Sim" || selectedIndex === 1) {
+                    console.log("APLICANDO SIM: Habilitando campos de tecnologias verdes");
+                    // Habilitar todos os campos de tecnologias verdes
+                    $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').prop('disabled', false);
+                    // Remover classe visual
+                    $('#tecverde_classe, #tecverde_subclasse, #tecverde_observacoes').removeClass('bg-light');
+                    
+                    $('#status').removeClass('alert-info alert-warning').addClass('alert-success');
+                    $('#status').append('<strong>Status:</strong> Campos habilitados (Sim)');
+                }
+                // Verificar se é "Não" pelo valor ou pelo texto ou pelo índice
+                else if (seAplica === "0" || seAplicaText === "Não" || selectedIndex === 2) {
+                    console.log("APLICANDO NÃO: Desabilitando campos de tecnologias verdes");
+                    // Desabilitar apenas os campos de classe e subclasse, mas NÃO o campo de observações
+                    $('#tecverde_classe, #tecverde_subclasse').prop('disabled', true);
+                    // Adicionar classe visual para indicar campos desabilitados
+                    $('#tecverde_classe, #tecverde_subclasse').addClass('bg-light');
+                    // Limpar valores dos campos se estiver definido como "Não"
+                    $('#tecverde_classe, #tecverde_subclasse').val('');
+                    
+                    $('#status').removeClass('alert-info alert-success').addClass('alert-warning');
+                    $('#status').append('<strong>Status:</strong> Campos desabilitados (Não)');
+                }
+            }
+            
+            // Atualizar estado dos campos quando o valor do campo "se aplica" mudar
+            $('#tecverde_se_aplica').change(verificarTecverdeSePlica);
+            
+            // Verificar inicialmente o estado do campo "se aplica"
+            verificarTecverdeSePlica();
+        });
+    </script>
+</body>
+</html>
