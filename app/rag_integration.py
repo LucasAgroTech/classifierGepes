@@ -78,6 +78,14 @@ class QueryAnalyzer:
             "sugestao_ia": [
                 r'sugere', r'sugestão', r'recomendação', r'ia', r'inteligência artificial',
                 r'rating', r'avaliação'
+            ],
+            "usuario_comparacao": [
+                r'usuário', r'usuários', r'colega', r'colegas', r'comparar',
+                r'comparação', r'ranking', r'desempenho', r'classificou', r'contribuíram',
+                r'contribuição', r'atividade', r'eu versus', r'eu vs', r'meu ranking',
+                r'minha classificação', r'minha posição', r'minhas estatísticas',
+                r'meu desempenho', r'como estou', r'quem mais', r'mais ativo',
+                r'classificações feitas', r'fez mais', r'quantas classificações', r'quantos projetos'
             ]
         }
     
@@ -213,7 +221,7 @@ class RAGAssistant:
         selected_model = self._select_model(query_analysis)
         
         # Retrieve relevant information from the database based on the user's query
-        context = self._retrieve_enhanced_context(user_message, query_analysis)
+        context = self._retrieve_enhanced_context(user_message, query_analysis, user_info)
         
         # Add user information to the system prompt if available
         system_content = self.system_prompt
@@ -284,13 +292,14 @@ class RAGAssistant:
         else:
             return self.models["advanced"]
     
-    def _retrieve_enhanced_context(self, query, query_analysis):
+    def _retrieve_enhanced_context(self, query, query_analysis, user_info=None):
         """
         Recupera contexto relevante baseado na análise da consulta
         
         Args:
             query (str): The user's query
             query_analysis (dict): Query type and complexity analysis
+            user_info (dict): Information about the current user
             
         Returns:
             str: Context information to include in the prompt
@@ -317,6 +326,9 @@ class RAGAssistant:
         
         if primary_type == "sugestao_ia" or type_scores["sugestao_ia"] > 0.3:
             context_parts.append(self._get_ai_suggestions_info())
+            
+        if primary_type == "usuario_comparacao" or type_scores["usuario_comparacao"] > 0.3:
+            context_parts.append(self._get_user_comparison_info(query, user_info))
         
         # Se nenhum contexto específico foi adicionado além da visão geral,
         # adiciona informações gerais
@@ -1024,6 +1036,215 @@ class RAGAssistant:
         except Exception as e:
             current_app.logger.error(f"Error searching project: {str(e)}")
             return f"Erro ao buscar projetos com o termo '{query}'."
+    
+    def _get_user_comparison_info(self, query, user_info=None):
+        """Obtém informações comparativas entre usuários do sistema"""
+        try:
+            # Extrair menção a usuário específico na consulta se houver
+            import re
+            user_mention = None
+            user_pattern = r'usuário\s+([a-zA-Z0-9_\.\-@]+)|colega\s+([a-zA-Z0-9_\.\-@]+)'
+            user_match = re.search(user_pattern, query, re.IGNORECASE)
+            if user_match:
+                user_mention = user_match.group(1) or user_match.group(2)
+            
+            current_user_email = user_info.get('email') if user_info else None
+            
+            # Verificar se a consulta contém referências ao próprio usuário
+            self_reference_patterns = [
+                r'\beu\b', r'\bmim\b', r'\bminhas?\b', r'\bmeuss?\b', 
+                r'\bme\b', r'\bcomo estou\b', r'\bmeu desempenho\b'
+            ]
+            is_self_reference_query = any(re.search(pattern, query, re.IGNORECASE) for pattern in self_reference_patterns)
+            
+            with db.engine.connect() as connection:
+                # Estatísticas gerais sobre atividades dos usuários
+                user_stats_result = connection.execute(text("""
+                    SELECT 
+                        u.email,
+                        u.nome,
+                        COUNT(DISTINCT l.id_projeto) as total_projetos,
+                        COUNT(CASE WHEN l.acao = 'classificacao_aia' THEN 1 END) as total_classificacoes_aia,
+                        COUNT(CASE WHEN l.acao = 'classificacao_tecverde' THEN 1 END) as total_classificacoes_tecverde,
+                        COUNT(CASE WHEN l.acao LIKE '%avaliacao_ia%' THEN 1 END) as total_avaliacoes_ia,
+                        MAX(l.data_acao) as ultima_atividade
+                    FROM gepes.usuarios u
+                    LEFT JOIN gepes.logs l ON u.id = l.id_usuario
+                    GROUP BY u.id, u.email, u.nome
+                    ORDER BY COUNT(l.id) DESC
+                """))
+                
+                users_stats = []
+                user_specific_stats = None
+                current_user_stats = None
+                mentioned_user_stats = None
+                
+                for row in user_stats_result:
+                    user_data = {
+                        'email': row[0],
+                        'nome': row[1],
+                        'total_projetos': row[2] or 0,
+                        'total_classificacoes_aia': row[3] or 0,
+                        'total_classificacoes_tecverde': row[4] or 0,
+                        'total_avaliacoes_ia': row[5] or 0,
+                        'ultima_atividade': row[6].strftime('%d/%m/%Y') if row[6] else 'Nunca'
+                    }
+                    
+                    # Identificar o usuário atual se disponível
+                    if current_user_email and user_data['email'] == current_user_email:
+                        current_user_stats = user_data
+                    
+                    users_stats.append(user_data)
+                
+                # Calcular médias para comparação
+                total_users = len(users_stats)
+                if total_users > 0:
+                    avg_projects = sum(u['total_projetos'] for u in users_stats) / total_users
+                    avg_aia = sum(u['total_classificacoes_aia'] for u in users_stats) / total_users
+                    avg_tecverde = sum(u['total_classificacoes_tecverde'] for u in users_stats) / total_users
+                    avg_ratings = sum(u['total_avaliacoes_ia'] for u in users_stats) / total_users
+                else:
+                    avg_projects = avg_aia = avg_tecverde = avg_ratings = 0
+                
+                # Identificar usuários mais ativos
+                most_active_users = sorted(
+                    users_stats, 
+                    key=lambda u: (u['total_classificacoes_aia'] + u['total_classificacoes_tecverde']), 
+                    reverse=True
+                )[:5]
+                
+                # Verificar se há usuário mencionado na consulta
+                if user_mention:
+                    for user in users_stats:
+                        if user_mention.lower() in user['email'].lower() or (
+                            user['nome'] and user_mention.lower() in user['nome'].lower()
+                        ):
+                            mentioned_user_stats = user
+                            break
+                
+                # Classificação do usuário atual
+                current_user_rank = None
+                if current_user_stats:
+                    ranked_users = sorted(
+                        users_stats,
+                        key=lambda u: (u['total_classificacoes_aia'] + u['total_classificacoes_tecverde']),
+                        reverse=True
+                    )
+                    for i, u in enumerate(ranked_users, 1):
+                        if u['email'] == current_user_stats['email']:
+                            current_user_rank = i
+                            break
+                
+                # Construir resposta
+                response_parts = []
+                
+                # Informações do usuário atual (se disponível e se a consulta for sobre si mesmo)
+                if current_user_stats and is_self_reference_query:
+                    current_user_total_classificacoes = current_user_stats['total_classificacoes_aia'] + current_user_stats['total_classificacoes_tecverde']
+                    rank_text = f" (classificado em {current_user_rank}º lugar de {total_users})" if current_user_rank else ""
+                    
+                    current_user_info = f"""
+                    SUAS ESTATÍSTICAS:
+                    
+                    Nome: {current_user_stats['nome']}
+                    Email: {current_user_stats['email']}
+                    Total de projetos: {current_user_stats['total_projetos']}
+                    Total de classificações: {current_user_total_classificacoes}{rank_text}
+                    - Classificações AIA: {current_user_stats['total_classificacoes_aia']}
+                    - Classificações TecVerde: {current_user_stats['total_classificacoes_tecverde']}
+                    Avaliações de IA: {current_user_stats['total_avaliacoes_ia']}
+                    Última atividade: {current_user_stats['ultima_atividade']}
+                    
+                    COMPARAÇÃO COM A MÉDIA:
+                    - Projetos: {current_user_stats['total_projetos']} vs média de {avg_projects:.1f} ({(current_user_stats['total_projetos'] / avg_projects * 100 if avg_projects > 0 else 0):.1f}% da média)
+                    - Classificações AIA: {current_user_stats['total_classificacoes_aia']} vs média de {avg_aia:.1f} ({(current_user_stats['total_classificacoes_aia'] / avg_aia * 100 if avg_aia > 0 else 0):.1f}% da média)
+                    - Classificações TecVerde: {current_user_stats['total_classificacoes_tecverde']} vs média de {avg_tecverde:.1f} ({(current_user_stats['total_classificacoes_tecverde'] / avg_tecverde * 100 if avg_tecverde > 0 else 0):.1f}% da média)
+                    """
+                    response_parts.append(current_user_info)
+                
+                # Resumo geral
+                summary = f"""
+                RESUMO DE ATIVIDADES DOS USUÁRIOS:
+                
+                Total de usuários no sistema: {total_users}
+                Média de projetos por usuário: {avg_projects:.1f}
+                Média de classificações AIA por usuário: {avg_aia:.1f}
+                Média de classificações TecVerde por usuário: {avg_tecverde:.1f}
+                Média de avaliações de IA por usuário: {avg_ratings:.1f}
+                """
+                response_parts.append(summary)
+                
+                # Informações do usuário atual (se disponível e a consulta não for sobre si mesmo)
+                if current_user_stats and not is_self_reference_query:
+                    current_user_total_classificacoes = current_user_stats['total_classificacoes_aia'] + current_user_stats['total_classificacoes_tecverde']
+                    rank_text = f" (classificado em {current_user_rank}º lugar de {total_users})" if current_user_rank else ""
+                    
+                    current_user_info = f"""
+                    SUAS ESTATÍSTICAS:
+                    
+                    Nome: {current_user_stats['nome']}
+                    Email: {current_user_stats['email']}
+                    Total de projetos: {current_user_stats['total_projetos']}
+                    Total de classificações: {current_user_total_classificacoes}{rank_text}
+                    - Classificações AIA: {current_user_stats['total_classificacoes_aia']}
+                    - Classificações TecVerde: {current_user_stats['total_classificacoes_tecverde']}
+                    Avaliações de IA: {current_user_stats['total_avaliacoes_ia']}
+                    Última atividade: {current_user_stats['ultima_atividade']}
+                    
+                    COMPARAÇÃO COM A MÉDIA:
+                    - Projetos: {current_user_stats['total_projetos']} vs média de {avg_projects:.1f} ({(current_user_stats['total_projetos'] / avg_projects * 100 if avg_projects > 0 else 0):.1f}% da média)
+                    - Classificações AIA: {current_user_stats['total_classificacoes_aia']} vs média de {avg_aia:.1f} ({(current_user_stats['total_classificacoes_aia'] / avg_aia * 100 if avg_aia > 0 else 0):.1f}% da média)
+                    - Classificações TecVerde: {current_user_stats['total_classificacoes_tecverde']} vs média de {avg_tecverde:.1f} ({(current_user_stats['total_classificacoes_tecverde'] / avg_tecverde * 100 if avg_tecverde > 0 else 0):.1f}% da média)
+                    """
+                    response_parts.append(current_user_info)
+                
+                # Usuários mais ativos
+                active_users = """
+                USUÁRIOS MAIS ATIVOS:
+                """
+                for i, user in enumerate(most_active_users, 1):
+                    active_users += f"\n{i}. {user['nome']} ({user['email']})"
+                    active_users += f"\n   Classificações: {user['total_classificacoes_aia'] + user['total_classificacoes_tecverde']}"
+                    active_users += f"\n   Projetos: {user['total_projetos']}"
+                    active_users += f"\n   Última atividade: {user['ultima_atividade']}"
+                
+                response_parts.append(active_users)
+                
+                # Informações específicas do usuário mencionado
+                if mentioned_user_stats:
+                    user_specific = f"""
+                    INFORMAÇÕES DO USUÁRIO MENCIONADO:
+                    
+                    Usuário: {mentioned_user_stats['nome']} ({mentioned_user_stats['email']})
+                    Total de projetos: {mentioned_user_stats['total_projetos']}
+                    Classificações AIA: {mentioned_user_stats['total_classificacoes_aia']}
+                    Classificações TecVerde: {mentioned_user_stats['total_classificacoes_tecverde']}
+                    Avaliações de IA: {mentioned_user_stats['total_avaliacoes_ia']}
+                    Última atividade: {mentioned_user_stats['ultima_atividade']}
+                    
+                    COMPARAÇÃO COM A MÉDIA:
+                    - Projetos: {mentioned_user_stats['total_projetos']} vs média de {avg_projects:.1f} ({(mentioned_user_stats['total_projetos'] / avg_projects * 100 if avg_projects > 0 else 0):.1f}% da média)
+                    - Classificações AIA: {mentioned_user_stats['total_classificacoes_aia']} vs média de {avg_aia:.1f} ({(mentioned_user_stats['total_classificacoes_aia'] / avg_aia * 100 if avg_aia > 0 else 0):.1f}% da média)
+                    - Classificações TecVerde: {mentioned_user_stats['total_classificacoes_tecverde']} vs média de {avg_tecverde:.1f} ({(mentioned_user_stats['total_classificacoes_tecverde'] / avg_tecverde * 100 if avg_tecverde > 0 else 0):.1f}% da média)
+                    """
+                    
+                    # Adicionar comparação com usuário atual se disponível
+                    if current_user_stats and current_user_stats['email'] != mentioned_user_stats['email']:
+                        user_specific += f"""
+                        
+                        COMPARAÇÃO COM VOCÊ:
+                        - Projetos: {mentioned_user_stats['total_projetos']} vs seus {current_user_stats['total_projetos']} ({(mentioned_user_stats['total_projetos'] / max(1, current_user_stats['total_projetos']) * 100):.1f}%)
+                        - Classificações AIA: {mentioned_user_stats['total_classificacoes_aia']} vs suas {current_user_stats['total_classificacoes_aia']} ({(mentioned_user_stats['total_classificacoes_aia'] / max(1, current_user_stats['total_classificacoes_aia']) * 100):.1f}%)
+                        - Classificações TecVerde: {mentioned_user_stats['total_classificacoes_tecverde']} vs suas {current_user_stats['total_classificacoes_tecverde']} ({(mentioned_user_stats['total_classificacoes_tecverde'] / max(1, current_user_stats['total_classificacoes_tecverde']) * 100):.1f}%)
+                        """
+                    
+                    response_parts.append(user_specific)
+                
+                return "\n\n".join(response_parts)
+                
+        except Exception as e:
+            current_app.logger.error(f"Error retrieving user comparison info: {str(e)}")
+            return "INFORMAÇÕES COMPARATIVAS DE USUÁRIOS: Dados não disponíveis no momento."
 
 # Create a singleton instance
 rag_assistant = RAGAssistant()

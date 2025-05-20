@@ -1,0 +1,351 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciamento de Categorias - GEPES Classifier{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/category_manager.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+    <!-- Header -->
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <h2 class="page-title">
+            <i class="fas fa-layer-group me-2 text-primary"></i>Gerenciamento de Categorias
+        </h2>
+        <a href="{{ url_for('main.projects') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+            <i class="fas fa-arrow-left me-1"></i>Voltar
+        </a>
+    </div>
+
+    <!-- Abas para separar categorias e tecnologias verdes -->
+    <ul class="nav nav-tabs mb-4" id="categoriesTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="categories-tab" data-bs-toggle="tab" data-bs-target="#categories-content" type="button" role="tab" aria-controls="categories-content" aria-selected="true">
+                <i class="fas fa-sitemap me-2"></i>Categorias de Projetos
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tecverde-tab" data-bs-toggle="tab" data-bs-target="#tecverde-content" type="button" role="tab" aria-controls="tecverde-content" aria-selected="false">
+                <i class="fas fa-leaf me-2"></i>Tecnologias Verdes
+            </button>
+        </li>
+    </ul>
+
+    <!-- Conteúdo das abas -->
+    <div class="tab-content" id="categoriesTabsContent">
+        <!-- Aba de Categorias -->
+        <div class="tab-pane fade show active" id="categories-content" role="tabpanel" aria-labelledby="categories-tab">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <button type="button" id="addMacroareaBtn" class="btn btn-primary btn-sm rounded-pill w-100">
+                        <i class="fas fa-plus me-1"></i>Nova Macroárea
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Lista de macroáreas em acordeon -->
+            <div class="accordion" id="macroareasAccordion">
+                {% for macroarea in hierarquia %}
+                <div class="accordion-item mb-3 border shadow-sm rounded">
+                    <h2 class="accordion-header" id="macroareaHeading{{ macroarea.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#macroareaCollapse{{ macroarea.id }}" aria-expanded="false" 
+                                aria-controls="macroareaCollapse{{ macroarea.id }}">
+                            <strong>{{ macroarea.valor }}</strong>
+                        </button>
+                    </h2>
+                    <div id="macroareaCollapse{{ macroarea.id }}" class="accordion-collapse collapse" 
+                         aria-labelledby="macroareaHeading{{ macroarea.id }}">
+                        <div class="accordion-body">
+                            <!-- Ações para macroárea -->
+                            <div class="d-flex justify-content-end mb-3">
+                                <button type="button" class="btn btn-outline-success btn-sm me-2 edit-macroarea" data-id="{{ macroarea.id }}" data-value="{{ macroarea.valor }}">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm delete-macroarea" data-id="{{ macroarea.id }}" data-value="{{ macroarea.valor }}">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                            
+                            <!-- Adicionar segmento -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-success btn-sm rounded-pill w-100 add-segmento" data-parent-id="{{ macroarea.id }}" data-parent-value="{{ macroarea.valor }}">
+                                        <i class="fas fa-plus me-1"></i>Novo Segmento
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de segmentos -->
+                            <div class="row">
+                                {% for segmento in macroarea.segmentos %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100 border-0 shadow-sm">
+                                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                            <h5 class="mb-0 fw-bold">{{ segmento.valor }}</h5>
+                                            <div>
+                                                <button type="button" class="btn btn-outline-success btn-sm me-1 edit-segmento" data-id="{{ segmento.id }}" data-value="{{ macroarea.valor }}|{{ segmento.valor }}" data-parent-id="{{ macroarea.id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-danger btn-sm delete-segmento" data-id="{{ segmento.id }}" data-value="{{ macroarea.valor }}|{{ segmento.valor }}">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            <h6 class="mb-2 text-primary fw-bold d-flex justify-content-between align-items-center">
+                                                Domínios
+                                                <button type="button" class="btn btn-primary btn-sm add-dominio" data-parent-id="{{ segmento.id }}" data-parent-value="{{ macroarea.valor }}|{{ segmento.valor }}">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </h6>
+                                            <div class="category-bubbles-container">
+                                                {% for dominio in segmento.dominios %}
+                                                <div class="category-bubble">
+                                                    {{ dominio.valor }}
+                                                    <button type="button" class="btn btn-sm btn-link text-danger delete-dominio" data-id="{{ dominio.id }}" data-value="{{ dominio.valor }}">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-link text-primary edit-dominio" data-id="{{ dominio.id }}" data-value="{{ dominio.valor }}" data-parent-id="{{ segmento.id }}">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- Aba de Tecnologias Verdes -->
+        <div class="tab-pane fade" id="tecverde-content" role="tabpanel" aria-labelledby="tecverde-tab">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <button type="button" id="addClasseBtn" class="btn btn-primary btn-sm rounded-pill w-100">
+                        <i class="fas fa-plus me-1"></i>Nova Classe
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Lista de classes em acordeon -->
+            <div class="accordion" id="classesAccordion">
+                {% for classe in tecverde_hierarquia %}
+                <div class="accordion-item mb-3 border shadow-sm rounded">
+                    <h2 class="accordion-header" id="classeHeading{{ classe.id }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#classeCollapse{{ classe.id }}" aria-expanded="false" 
+                                aria-controls="classeCollapse{{ classe.id }}">
+                            <strong>{{ classe.valor }}</strong>
+                        </button>
+                    </h2>
+                    <div id="classeCollapse{{ classe.id }}" class="accordion-collapse collapse" 
+                         aria-labelledby="classeHeading{{ classe.id }}">
+                        <div class="accordion-body">
+                            <!-- Ações para classe -->
+                            <div class="d-flex justify-content-end mb-3">
+                                <button type="button" class="btn btn-outline-success btn-sm me-2 edit-classe" data-id="{{ classe.id }}" data-value="{{ classe.valor }}">
+                                    <i class="fas fa-edit me-1"></i>Editar
+                                </button>
+                                <button type="button" class="btn btn-outline-danger btn-sm delete-classe" data-id="{{ classe.id }}" data-value="{{ classe.valor }}">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
+                            </div>
+                            
+                            <!-- Adicionar subclasse -->
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-success btn-sm rounded-pill w-100 add-subclasse" data-parent-id="{{ classe.id }}" data-parent-value="{{ classe.valor }}">
+                                        <i class="fas fa-plus me-1"></i>Nova Subclasse
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- Lista de subclasses -->
+                            <div class="category-bubbles-container">
+                                {% for subclasse in classe.subclasses %}
+                                <div class="category-bubble">
+                                    {{ subclasse.valor }}
+                                    <button type="button" class="btn btn-sm btn-link text-danger delete-subclasse" data-id="{{ subclasse.id }}" data-value="{{ classe.valor }}|{{ subclasse.valor }}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-link text-primary edit-subclasse" data-id="{{ subclasse.id }}" data-value="{{ classe.valor }}|{{ subclasse.valor }}" data-parent-id="{{ classe.id }}">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals para adicionar/editar -->
+<!-- Modal para Macroárea -->
+<div class="modal fade" id="macroareaModal" tabindex="-1" aria-labelledby="macroareaModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="macroareaModalLabel">Nova Macroárea</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="macroarea-id">
+                <div class="mb-3">
+                    <label for="macroarea-value" class="form-label">Nome da Macroárea</label>
+                    <input type="text" class="form-control" id="macroarea-value" placeholder="Digite o nome da macroárea">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveMacroareaBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Segmento -->
+<div class="modal fade" id="segmentoModal" tabindex="-1" aria-labelledby="segmentoModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="segmentoModalLabel">Novo Segmento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="segmento-id">
+                <input type="hidden" id="segmento-parent-id">
+                <div class="mb-3">
+                    <label for="segmento-parent" class="form-label">Macroárea</label>
+                    <input type="text" class="form-control" id="segmento-parent" disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="segmento-value" class="form-label">Nome do Segmento</label>
+                    <input type="text" class="form-control" id="segmento-value" placeholder="Digite o nome do segmento">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveSegmentoBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Domínio -->
+<div class="modal fade" id="dominioModal" tabindex="-1" aria-labelledby="dominioModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dominioModalLabel">Novo Domínio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="dominio-id">
+                <input type="hidden" id="dominio-parent-id">
+                <div class="mb-3">
+                    <label for="dominio-parent" class="form-label">Segmento</label>
+                    <input type="text" class="form-control" id="dominio-parent" disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="dominio-value" class="form-label">Nome do Domínio</label>
+                    <input type="text" class="form-control" id="dominio-value" placeholder="Digite o nome do domínio">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveDominioBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Classe -->
+<div class="modal fade" id="classeModal" tabindex="-1" aria-labelledby="classeModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="classeModalLabel">Nova Classe</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="classe-id">
+                <div class="mb-3">
+                    <label for="classe-value" class="form-label">Nome da Classe</label>
+                    <input type="text" class="form-control" id="classe-value" placeholder="Digite o nome da classe">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveClasseBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Subclasse -->
+<div class="modal fade" id="subclasseModal" tabindex="-1" aria-labelledby="subclasseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="subclasseModalLabel">Nova Subclasse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="subclasse-id">
+                <input type="hidden" id="subclasse-parent-id">
+                <div class="mb-3">
+                    <label for="subclasse-parent" class="form-label">Classe</label>
+                    <input type="text" class="form-control" id="subclasse-parent" disabled>
+                </div>
+                <div class="mb-3">
+                    <label for="subclasse-value" class="form-label">Nome da Subclasse</label>
+                    <input type="text" class="form-control" id="subclasse-value" placeholder="Digite o nome da subclasse">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="saveSubclasseBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmação para exclusão -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmDeleteText">Tem certeza que deseja excluir esta categoria?</p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="deleteWarningText">Esta ação também excluirá todos os itens relacionados.</span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/category_manager.js') }}"></script>
+{% endblock %}

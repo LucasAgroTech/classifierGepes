@@ -908,20 +908,20 @@ def add_dominio():
         if existente:
             return jsonify({'success': False, 'error': 'Este domínio já existe para esta combinação de Macroárea e Segmento.'}), 400
         
-        # Adicionar novo domínio à lista
-        dominio = CategoriaLista(
+        # Adicionar novo domínio à lista - criar explicitamente apenas com os campos necessários
+        dominio = CategoriaLista.__table__.insert().values(
             tipo='dominio',
             valor=valor_dominio,
             ativo=True
         )
-        db.session.add(dominio)
+        db.session.execute(dominio)
         db.session.commit()
         
         # Buscar domínios atualizados para esta combinação de macroárea e segmento
         dominios_por_microarea_segmento = {}
         
-        # Obter todas as categorias de domínio ativas
-        all_dominios = CategoriaLista.query.filter_by(tipo='dominio', ativo=True).all()
+        # Obter todas as categorias de domínio ativas usando a query segura
+        all_dominios = _get_categoria_lista_query().filter_by(tipo='dominio', ativo=True).all()
         
         # Processar cada domínio para extrair a estrutura hierárquica
         for cat in all_dominios:

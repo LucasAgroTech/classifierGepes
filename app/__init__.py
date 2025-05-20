@@ -44,6 +44,10 @@ def create_app(config_class=Config):
     from app.routes_chat import chat_bp
     app.register_blueprint(chat_bp, url_prefix='/chat')
     
+    # Registrar blueprint para gerenciamento de categorias
+    from app.routes_categories import categories
+    app.register_blueprint(categories)
+    
     # Criar tabelas se não existirem (apenas para desenvolvimento)
     with app.app_context():
         db.create_all()
