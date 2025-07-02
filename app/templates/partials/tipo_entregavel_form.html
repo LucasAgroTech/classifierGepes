@@ -1,0 +1,41 @@
+        <div class="card shadow-sm categorization-card border-0 mt-4" id="entregavelForm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center"
+                 id="entregavelHeader" data-bs-toggle="collapse" data-bs-target="#entregavelContent"
+                 aria-expanded="true" aria-controls="entregavelContent" role="button">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-box-open me-2 text-primary"></i>Tipo de Entregável
+                </h5>
+                <button class="btn btn-link p-0 border-0 entregavel-collapse-icon">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+
+            <div id="entregavelContent" class="collapse show">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select shadow-sm" id="tipo_entregavel" name="tipo_entregavel">
+                                    <option value="">Selecione...</option>
+                                    {% for option in categories_lists.get('tipo_entregavel', []) %}
+                                        {% if option %}
+                                        <option value="{{ option }}" {% if existing and existing.tipo_entregavel == option %}selected{% endif %}>{{ option }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <label for="tipo_entregavel">Tipo de Entregável</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="entregavel_observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control shadow-sm" id="entregavel_observacoes" name="entregavel_observacoes" rows="3" placeholder="Adicione observações...">{{ existing.entregavel_observacoes if existing and existing.entregavel_observacoes else '' }}</textarea>
+                        </div>
+                        <div class="col-md-12 mt-3 d-flex justify-content-end">
+                            <button type="button" id="saveEntregavelBtn" class="btn btn-success rounded-pill" style="width: 100%;">
+                                <i class="fas fa-save me-1"></i> SALVAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>

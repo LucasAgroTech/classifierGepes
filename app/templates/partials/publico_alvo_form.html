@@ -1,0 +1,37 @@
+        <div class="card shadow-sm categorization-card border-0 mt-4" id="publicoForm">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center"
+                 id="publicoHeader" data-bs-toggle="collapse" data-bs-target="#publicoContent"
+                 aria-expanded="true" aria-controls="publicoContent" role="button">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-users me-2 text-primary"></i>Público Alvo
+                </h5>
+                <button class="btn btn-link p-0 border-0 publico-collapse-icon">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+
+            <div id="publicoContent" class="collapse show">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="form-floating">
+                                <select class="form-select shadow-sm" id="publico_alvo" name="publico_alvo">
+                                    <option value="">Selecione...</option>
+                                    {% for option in categories_lists.get('publico_alvo', []) %}
+                                        {% if option %}
+                                        <option value="{{ option }}" {% if existing and existing.publico_alvo == option %}selected{% endif %}>{{ option }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                                <label for="publico_alvo">Público Alvo</label>
+                            </div>
+                        </div>
+                        <div class="col-md-12 mt-3 d-flex justify-content-end">
+                            <button type="button" id="savePublicoBtn" class="btn btn-success rounded-pill" style="width: 100%;">
+                                <i class="fas fa-save me-1"></i> SALVAR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
