@@ -1,0 +1,117 @@
+        <div class="col-lg-4">
+            <div class="card shadow-sm project-info-card h-100 border-0">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fas fa-info-circle me-2 text-primary"></i>Informações do Projeto
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- ID do projeto acima do título -->
+                    {% if project.codigo_projeto %}
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-success text-white me-2">ID</span>
+                        <span class="fw-bold">{{ project.codigo_projeto }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    <h4 class="project-title mb-3">{{ project.titulo }}</h4>
+                    
+                    <!-- Seção colapsável para informações específicas do projeto -->
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center cursor-pointer" 
+                             id="projectDetailsHeader" data-bs-toggle="collapse" data-bs-target="#projectDetailsContent" 
+                             aria-expanded="false" aria-controls="projectDetailsContent" role="button">
+                            <h6 class="mb-0 fw-bold">
+                                <i class="fas fa-list-alt me-2 text-primary"></i>Dados do Projeto
+                            </h6>
+                            <button class="btn btn-link p-0 border-0 project-collapse-icon">
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="projectDetailsContent" class="collapse">
+                            <div class="py-2">
+                                {% if project.unidade_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Unidade EMBRAPII</span>
+                                    <span>{{ project.unidade_embrapii }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.data_contrato %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Data do Contrato</span>
+                                    <span>{{ project.data_contrato }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project.tipo_projeto %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Tipo de Projeto</span>
+                                    <span>{{ project.tipo_projeto }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._valor_total %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Valor Total</span>
+                                    <span id="valor_total_formatado">R$ {{ project._valor_total }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">EMBRAPII</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_embrapii }}">{{ project._perc_valor_embrapii }}%</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_empresa_sebrae %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Empresa/SEBRAE</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_empresa_sebrae }}">{{ project._perc_valor_empresa_sebrae }}%</span>
+                                </div>
+                                {% endif %}
+                                
+                                {% if project._perc_valor_unidade_embrapii %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-light text-dark border me-2">Unidade EMBRAPII</span>
+                                    <span class="percentual-formatado" data-valor="{{ project._perc_valor_unidade_embrapii }}">{{ project._perc_valor_unidade_embrapii }}%</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if project.objetivo %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Objetivo</h6>
+                        <p class="text-muted small">{{ project.objetivo }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.descricao_publica %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Descrição</h6>
+                        <p class="text-muted small">{{ project.descricao_publica }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.tecnologia_habilitadora %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Tecnologia Habilitadora <span class="text-muted">(Versão antiga)</span></h6>
+                        <p class="text-muted small">{{ project.tecnologia_habilitadora }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if project.area_aplicacao %}
+                    <div class="mb-3">
+                        <h6 class="mb-2 text-primary fw-bold">Área de Aplicação <span class="text-muted">(Versão antiga)</span></h6>
+                        <p class="text-muted small">{{ project.area_aplicacao }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Removido a seção de classificações adicionais daqui, movida para o card da direita -->
+                </div>
+            </div>
+        </div>

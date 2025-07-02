@@ -1,0 +1,198 @@
+        <!-- Novo card para Tecnologias Verdes -->
+        <div class="card shadow-sm categorization-card border-0 mt-4" id="tecverdeForm">
+            <!-- Header colapsável -->
+            <div class="card-header bg-white d-flex justify-content-between align-items-center" 
+                 id="tecverdeHeader" data-bs-toggle="collapse" data-bs-target="#tecverdeContent" 
+                 aria-expanded="true" aria-controls="tecverdeContent" role="button">
+                <h5 class="mb-0 fw-bold">
+                    <i class="fas fa-leaf me-2 text-success"></i>Tecnologias Verdes
+                </h5>
+                <button class="btn btn-link p-0 border-0 tecverde-collapse-icon">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            
+            <!-- Conteúdo colapsável -->
+            <div id="tecverdeContent" class="collapse show">
+                
+                <!-- Seção de sugestões da IA -->
+                {% if ai_suggestion %}
+                <div id="aiTecverdeSuggestionSection" class="card-body border-bottom" style="background-color: #fff !important; margin-left: 0.37rem !important; margin-right: 0.30rem !important;">
+                    <div class="d-flex justify-content-start align-items-center w-100">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-robot me-2 tech-red-gradient"></i>
+                            <h5 class="mb-0 fw-bold tech-red-gradient">Classificação IA</h5>
+                            {% if ai_suggestion.is_reused_suggestion and ai_suggestion.timestamp %}
+                            <span class="badge bg-light text-secondary ms-2" title="Classificação gerada em {{ ai_suggestion.timestamp|replace('T', ' ')|truncate(16, True, '') }}">
+                                <i class="fas fa-history me-1"></i>Existente
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center ms-auto">
+                            <span class="badge rounded-pill me-2 fs-6 d-flex align-items-center" id="aiTecverdeConfidenceBadge" style="font-weight: 500; border: 2px solid #17a2b8;">
+                                <img src="{{ url_for('static', filename='img/confianca.png') }}" alt="Confiança" height="20" class="me-1">
+                                <span>-</span>
+                            </span>
+                            <button type="button" class="btn btn-sm btn-gradient rounded-pill" id="showTecverdeJustificationBtn">
+                                <i class="fas fa-info-circle me-1"></i><span>Ver Classificação</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-2 p-3 border rounded" id="tecverdeJustificationBox" style="display: none; background-color: #e6ffe62f !important;">
+                        
+                        <!-- Seção de categorias sugeridas pela IA -->
+                        <div class="mb-3">
+                            <h6 class="mb-2 tech-red-gradient fw-bold">Classificação sugerida</h6>
+                            
+                            <!-- Classe e Subclasse -->
+                            <div class="mb-2">
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-light text-dark border me-2">Se Aplica</span>
+                                    <span id="aiTecverdeSeAplica" class="text-muted">-</span>
+                                </div>
+                                <div class="d-flex align-items-center mb-1">
+                                    <span class="badge bg-light text-dark border me-2">Classe</span>
+                                    <span id="aiTecverdeClasse" class="text-muted">-</span>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-light text-dark border me-2">Subclasse</span>
+                                    <span id="aiTecverdeSubclasse" class="text-muted">-</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Texto da justificativa -->
+                        <div>
+                            <h6 class="mb-2 tech-red-gradient"><i class="fas fa-lightbulb me-2"></i>Justificativa da IA</h6>
+                            <p id="aiTecverdeJustificationText" class="mb-0 text-muted fst-italic">-</p>
+                        </div>
+                        
+                        <!-- Sistema de avaliação da resposta da IA para Tecnologias Verdes -->
+                        <div class="mt-4 pt-3 border-top">
+                            <h6 class="mb-2 tech-red-gradient d-flex align-items-center justify-content-between">
+                                <span><i class="fas fa-star me-2"></i>Avaliação da Resposta</span>
+                                <span>
+                                    {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating > 0 and ai_ratings.tecverde.nome_usuario and ai_ratings.tecverde.timestamp %}
+                                    <span class="badge bg-light text-secondary" title="Última avaliação">
+                                        <i class="fas fa-user-edit me-1"></i>{{ ai_ratings.tecverde.nome_usuario }} - {{ ai_ratings.tecverde.timestamp.split(' ')[0].split('-')|reverse|join('/') }} {{ ai_ratings.tecverde.timestamp.split(' ')[1] }}
+                                        {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating > 0 %}
+                                        <span class="ms-1 badge bg-warning text-dark" title="Nota: {{ ai_ratings.tecverde.rating }}/5">
+                                            <i class="fas fa-star me-1"></i>{{ ai_ratings.tecverde.rating }}
+                                        </span>
+                                        {% endif %}
+                                    </span>
+                                    {% endif %}
+                                </span>
+                            </h6>
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="ai-rating me-2">
+                                    <i class="far fa-star rating-star" data-value="1" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="2" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="3" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="4" data-type="tecverde"></i>
+                                    <i class="far fa-star rating-star" data-value="5" data-type="tecverde"></i>
+                                </div>
+                                <span id="tecverde-rating-text" class="small text-muted ms-2">Selecione uma avaliação</span>
+                                <input type="hidden" id="tecverde-rating-value" name="tecverde_rating_value" value="{{ ai_ratings.tecverde.rating if ai_ratings and ai_ratings.tecverde }}">
+                            </div>
+                            <div class="form-group">
+                                <textarea class="form-control form-control-sm" id="tecverde-rating-observacoes" 
+                                    name="tecverde_rating_observacoes" rows="2" 
+                                    placeholder="Observações sobre a classificação de tecnologias verdes da IA...">{{ ai_ratings.tecverde.observacoes if ai_ratings and ai_ratings.tecverde }}</textarea>
+                            </div>
+                            <div class="text-end mt-2">
+                                <button type="button" id="saveTecverdeRatingBtn" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    <i class="fas fa-save me-1"></i>Salvar Avaliação
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Formulário de categorização -->
+                <div class="card-body border-bottom" style="margin-left: 0.37rem !important; margin-right: 0.30rem !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-3 w-100">
+                        <div class="d-flex align-items-center">
+                            <h5 class="mb-0 fw-bold tech-red-gradient">Classificação</h5>
+                            {% if project_logs and project_logs|length > 0 %}
+                            <span class="badge bg-light text-secondary ms-2" title="Última atualização">
+                                <i class="fas fa-user-edit me-1"></i>{{ project_logs[0].nome_usuario }} - {{ project_logs[0].data.split(' ')[0].split('-')|reverse|join('/') }} {{ project_logs[0].data.split(' ')[1] }}
+                                {% if ai_ratings and ai_ratings.tecverde and ai_ratings.tecverde.rating %}
+                                <span class="ms-1 badge bg-warning text-dark" title="Avaliação da IA (Tecnologias Verdes): {{ ai_ratings.tecverde.rating }} estrelas">
+                                    <i class="fas fa-star me-1"></i>{{ ai_ratings.tecverde.rating }}
+                                </span>
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-sm p-0 border-0 bg-transparent" id="toggleTecverdeFormBtn">
+                                <i class="fas fa-chevron-up text-primary"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="tecverdeFormContent">
+                        <div class="row g-4">
+                            <!-- Campo para indicar se a tecnologia verde se aplica -->
+                            <div class="col-md-12">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_se_aplica" name="tecverde_se_aplica" data-has-existing="{% if existing and existing.tecverde_se_aplica %}true{% else %}false{% endif %}">
+                                        <option value="">Selecione...</option>
+                                        <option value="1" {% if existing and existing.tecverde_se_aplica == 1 %}selected{% endif %}>Sim</option>
+                                        <option value="0" {% if existing and existing.tecverde_se_aplica == 0 %}selected{% endif %}>Não</option>
+                                    </select>
+                                    <label for="tecverde_se_aplica">Tecnologia Verde se aplica?</label>
+                                </div>
+                                <div class="form-text text-muted mb-3">
+                                    <i class="fas fa-info-circle me-1 mt-2"></i> Indique se o projeto utiliza ou desenvolve Tecnologias Verdes.
+                                </div>
+                            </div>
+                            
+                            <!-- Primeira linha: Classe e Subclasse -->
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_classe" name="tecverde_classe">
+                                        <option value="">Selecione...</option>
+                                        {% for classe, descricao in tecverde_classes.items() %}
+                                            {% if classe %}
+                                            <option value="{{ classe }}" {% if existing and existing.tecverde_classe == classe %}selected{% endif %} title="{{ descricao }}">
+                                                {{ classe }}
+                                            </option>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </select>
+                                    <label for="tecverde_classe">Classe</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    <select class="form-select shadow-sm" id="tecverde_subclasse" name="tecverde_subclasse">
+                                        <option value="">Selecione...</option>
+                                    </select>
+                                    <label for="tecverde_subclasse">Subclasse</label>
+                                </div>
+                            </div>
+                            
+                            <!-- Campo de Observações -->
+                            <div class="col-md-12 mt-4">
+                                <label for="tecverde_observacoes" class="form-label">
+                                    Observações
+                                </label>
+                                <textarea class="form-control shadow-sm" id="tecverde_observacoes" name="tecverde_observacoes" rows="4" placeholder="Adicione observações relevantes sobre a classificação de tecnologias verdes deste projeto...">{{ existing.tecverde_observacoes if existing and existing.tecverde_observacoes else '' }}</textarea>
+                            </div>
+
+                            <!-- Botão de Salvar Tecnologias Verdes -->
+                            <div class="col-md-12 mt-4 d-flex justify-content-end">
+                                <button type="button" id="saveTecverdeBtn" class="btn btn-success rounded-pill" style="width: 100%;">
+                                    <i class="fas fa-save me-1"></i> SALVAR
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
